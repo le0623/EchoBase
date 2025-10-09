@@ -1,0 +1,127 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+@plugin "daisyui";
+@plugin "daisyui/theme" {
+  name: "demobot";
+  default: true;
+  prefersdark: false;
+  color-scheme: light;
+
+  --color-base-100: oklch(98% 0 0);
+  --color-base-200: oklch(96% 0 0);
+  --color-base-300: oklch(94% 0 0);
+  --color-base-content: oklch(28% 0 0);
+  
+  --color-primary: oklch(55% 0.2 240);
+  --color-primary-content: oklch(98% 0 0);
+  
+  --color-secondary: oklch(70% 0.15 200);
+  --color-secondary-content: oklch(20% 0 0);
+  
+  --color-accent: oklch(65% 0.2 160);
+  --color-accent-content: oklch(98% 0 0);
+  
+  --color-neutral: oklch(28% 0 0);
+  --color-neutral-content: oklch(98% 0 0);
+  
+  --color-info: oklch(60% 0.2 220);
+  --color-info-content: oklch(98% 0 0);
+  
+  --color-success: oklch(60% 0.2 145);
+  --color-success-content: oklch(98% 0 0);
+  
+  --color-warning: oklch(75% 0.2 80);
+  --color-warning-content: oklch(20% 0 0);
+  
+  --color-error: oklch(60% 0.25 25);
+  --color-error-content: oklch(98% 0 0);
+
+  --radius-selector: 0.75rem;
+  --radius-field: 0.75rem;
+  --radius-box: 1.25rem;
+
+  --border: 1px;
+}
+
+:root {
+  --sidebar-bg: oklch(18% 0.01 240);
+  --sidebar-item-hover: oklch(25% 0.02 240);
+  --sidebar-text: oklch(50% 0.02 240);
+  --sidebar-text-active: oklch(98% 0.01 240);
+  --hero-gradient-start: oklch(95% 0.02 50);
+  --hero-gradient-end: oklch(92% 0.03 220);
+  --chart-bar-primary: oklch(60% 0.25 230);
+  --chart-bar-secondary: oklch(75% 0.15 230);
+  --badge-processed: oklch(60% 0.25 230);
+  --badge-error: oklch(60% 0.25 25);
+  --badge-confidence-high: oklch(60% 0.25 230);
+  --text-muted: oklch(50% 0.02 240);
+  --border-light: oklch(90% 0.01 240);
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background: var(--color-base-100);
+  color: var(--color-base-content);
+}
+
+@utility heading-xl {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 2.5rem;
+  font-weight: 800;
+  letter-spacing: -0.075rem;
+  line-height: 3.125rem;
+}
+
+@utility heading-lg {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.625rem;
+  font-weight: 800;
+  letter-spacing: -0.05rem;
+}
+
+@utility heading-md {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+@utility heading-sm {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.375rem;
+  font-weight: 700;
+}
+
+@utility body-lg {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.125rem;
+  font-weight: 500;
+  letter-spacing: -0.0088rem;
+}
+
+@utility body-md {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: -0.0081rem;
+}
+
+@utility body-sm {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+@utility stat-value {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 2.25rem;
+  font-weight: 800;
+  letter-spacing: -0.0675rem;
+}
+
+@utility stat-change {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.835rem;
+  font-weight: 800;
+  letter-spacing: -0.0069rem;
+}

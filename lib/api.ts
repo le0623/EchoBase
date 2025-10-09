@@ -1,0 +1,75 @@
+import { prisma } from './prisma';
+import { requireTenant, getCurrentUser } from './auth';
+
+// API Client functions for data fetching
+export const api = {
+  // User related queries
+  async getCurrentUser() {
+    return await getCurrentUser();
+  },
+
+  // Tenant related queries
+  async getCurrentTenant() {
+    const { tenant } = await requireTenant();
+    return tenant;
+  },
+
+  async getTenantUsers() {
+    const { tenant } = await requireTenant();
+    
+    const users = await prisma.user.findMany({
+      where: {
+        tenantId: tenant.id,
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        profileImageUrl: true,
+        createdAt: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return users;
+  },
+
+  async getUserStats() {
+    const { tenant } = await requireTenant();
+    
+    const userCount = await prisma.user.count({
+      where: {
+        tenantId: tenant.id,
+      },
+    });
+
+    const recentUsers = await prisma.user.count({
+      where: {
+        tenantId: tenant.id,
+        createdAt: {
+          gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Last 30 days
+        },
+      },
+    });
+
+    return {
+      totalUsers: userCount,
+      recentUsers,
+    };
+  },
+
+  // Example: Add more API functions as needed
+  async getDashboardData() {
+    const { user, tenant } = await requireTenant();
+    const userStats = await this.getUserStats();
+
+    return {
+      user,
+      tenant,
+      stats: userStats,
+    };
+  },
+};
