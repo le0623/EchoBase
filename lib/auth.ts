@@ -68,7 +68,6 @@ export async function getCurrentTenant(user: CurrentUser): Promise<CurrentTenant
     return {
       id: tenant.id,
       name: tenant.name,
-      domain: tenant.domain || undefined,
       logoUrl: tenant.logoUrl || undefined,
     };
   } catch (error) {

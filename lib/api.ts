@@ -24,8 +24,7 @@ export const api = {
       select: {
         id: true,
         email: true,
-        firstName: true,
-        lastName: true,
+        name: true,
         profileImageUrl: true,
         createdAt: true,
       },
