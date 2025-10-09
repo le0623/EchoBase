@@ -15,24 +15,6 @@ type PageType = 'dashboard' | 'billing' | 'documents' | 'users' | 'chat' | 'sett
 export default function PreviewPage() {
   const [activePage, setActivePage] = useState<PageType>('dashboard');
 
-  if (activePage === 'signin') {
-    return (
-      <div>
-        <div className="fixed top-4 left-4 z-50">
-          <button
-            onClick={() => setActivePage('dashboard')}
-            className="bg-white px-4 py-2 rounded-lg shadow-lg"
-          >
-            ← Back to App
-          </button>
-        </div>
-        <Link href="/signin">
-          <div className="cursor-pointer">Sign In Page (Click to view)</div>
-        </Link>
-      </div>
-    );
-  }
-
   return (
     <div>
       {/* Page Selector */}
