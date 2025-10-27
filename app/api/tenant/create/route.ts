@@ -65,7 +65,12 @@ export async function POST(request: NextRequest) {
 
     // Get the current user
     const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
+      where: { email: session.user.email },
+      include: {
+        tenants: {
+          where: { isOwner: true }
+        }
+      }
     });
 
     if (!user) {
@@ -75,25 +80,45 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create the tenant
-    const tenant = await prisma.tenant.create({
-      data: {
-        name: name.trim(),
-      }
-    });
+    // Check if user already owns an organization
+    const ownedTenants = user.tenants.filter(tenant => tenant.isOwner);
+    if (ownedTenants.length > 0) {
+      return NextResponse.json(
+        { error: 'You can only create one organization. You already own an organization.' },
+        { status: 400 }
+      );
+    }
 
-    // Update user to belong to this tenant
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { tenantId: tenant.id }
+    // Create the tenant and add user as owner in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Create the tenant
+      const tenant = await tx.tenant.create({
+        data: {
+          name: name.trim(),
+          subdomain: name.toLowerCase().replace(/[^a-z0-9-]/g, ''),
+        }
+      });
+
+      // Add user as owner of the tenant
+      await tx.tenantMember.create({
+        data: {
+          userId: user.id,
+          tenantId: tenant.id,
+          role: 'ADMIN',
+          isOwner: true,
+        }
+      });
+
+      return tenant;
     });
 
     return NextResponse.json(
       { 
         message: 'Organization created successfully', 
         tenant: {
-          id: tenant.id,
-          name: tenant.name
+          id: result.id,
+          name: result.name,
+          subdomain: result.subdomain
         }
       },
       { status: 201 }

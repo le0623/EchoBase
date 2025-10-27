@@ -21,13 +21,11 @@ model User {
   updatedAt        DateTime @updatedAt @map("updated_at")
   lastActive       DateTime @default(now()) @map("last_active")
   
-  // User status and role
+  // User status
   status           UserStatus @default(PENDING)
-  role             UserRole @default(MEMBER)
   
-  // Multi-tenant relationship
-  tenantId         String?  @map("tenant_id")
-  tenant           Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  // Multi-tenant relationship - users can belong to multiple tenants
+  tenants          TenantMember[]
   
   // Invitation relationship
   invitationId     String?  @unique @map("invitation_id")
@@ -41,15 +39,34 @@ model User {
   @@map("users")
 }
 
+// Tenant Member - User-Tenant relationship with role
+model TenantMember {
+  id               String   @id @default(cuid())
+  userId           String   @map("user_id")
+  tenantId         String   @map("tenant_id")
+  role             UserRole @default(MEMBER)
+  isOwner          Boolean  @default(false) @map("is_owner")
+  joinedAt         DateTime @default(now()) @map("joined_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, tenantId])
+  @@map("tenant_members")
+}
+
 model Tenant {
   id                String   @id @default(cuid())
   name              String
+  subdomain         String?  @unique // Subdomain for tenant-specific routing
   logoUrl           String?  @map("logo_url")
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
 
   // Relationships
-  users             User[]
+  members           TenantMember[]
   invitations       UserInvitation[]
   documents         Document[]
 

@@ -100,6 +100,10 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
     async redirect({ url, baseUrl }) {
+      // If no specific URL is provided, redirect to tenant selection
+      if (url === baseUrl || url === `${baseUrl}/`) {
+        return `${baseUrl}/select-tenant`;
+      }
       return url.startsWith(baseUrl) ? url : baseUrl;
     }
   },

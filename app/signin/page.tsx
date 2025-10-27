@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { signIn, getSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function SignInPage() {
   const [email, setEmail] = useState('');
@@ -17,6 +17,8 @@ export default function SignInPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const tenantId = searchParams.get('tenant');
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +35,12 @@ export default function SignInPage() {
       if (result?.error) {
         setError('Invalid email or password');
       } else {
-        router.push('/dashboard');
+        // If accessing via tenant subdomain, redirect to tenant dashboard
+        if (tenantId) {
+          router.push(`/dashboard?tenant=${tenantId}`);
+        } else {
+          router.push('/select-tenant');
+        }
       }
     } catch (error) {
       setError('An error occurred. Please try again.');
@@ -99,9 +106,10 @@ export default function SignInPage() {
   const handleMicrosoftSignIn = async () => {
     setIsLoading(true);
     setError('');
-    
+
     try {
-      await signIn('azure-ad', { callbackUrl: '/dashboard' });
+      const callbackUrl = tenantId ? `/dashboard?tenant=${tenantId}` : '/select-tenant';
+      await signIn('azure-ad', { callbackUrl });
     } catch (error) {
       setError('An error occurred. Please try again.');
       setIsLoading(false);
@@ -183,7 +191,7 @@ export default function SignInPage() {
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="input input-bordered w-full"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                       required
                     />
                   </div>
@@ -197,7 +205,7 @@ export default function SignInPage() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="input input-bordered w-full"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                     required
                   />
                 </div>
@@ -211,7 +219,7 @@ export default function SignInPage() {
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="input input-bordered w-full pr-12"
+                      className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                       required
                       minLength={activeTab === 'signup' ? 6 : undefined}
                     />
@@ -235,7 +243,7 @@ export default function SignInPage() {
                         type={showPassword ? 'text' : 'password'}
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="input input-bordered w-full pr-12"
+                        className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                         required
                       />
                       <button
@@ -250,14 +258,14 @@ export default function SignInPage() {
                 )}
 
                 {error && (
-                  <div className="alert alert-error">
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
                     <span>{error}</span>
                   </div>
                 )}
                 
                 <button 
                   type="submit" 
-                  className="btn btn-primary w-full text-lg"
+                  className="w-full bg-[#1d1d1d] text-white py-4 rounded-lg font-semibold text-lg hover:bg-[#2d2d2d] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={isLoading}
                 >
                   {isLoading 
