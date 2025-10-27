@@ -20,6 +20,23 @@ AZURE_AD_CLIENT_SECRET="your_azure_ad_client_secret"
 AZURE_AD_TENANT_ID="your_azure_ad_tenant_id"
 ```
 
+## Email Configuration (Required for user invitations)
+```bash
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT="587"
+SMTP_USER="your-email@gmail.com"
+SMTP_PASS="your-app-password"
+SMTP_FROM="Your App Name <noreply@yourapp.com>"
+```
+
+## AWS S3 Configuration (Required for document storage)
+```bash
+AWS_REGION="us-east-1"
+AWS_ACCESS_KEY_ID="your-aws-access-key-id"
+AWS_SECRET_ACCESS_KEY="your-aws-secret-access-key"
+AWS_S3_BUCKET_NAME="your-s3-bucket-name"
+```
+
 ## Environment
 ```bash
 NODE_ENV="development"

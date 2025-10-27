@@ -37,6 +37,17 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        // Check if user is active
+        if (user.status !== 'ACTIVE') {
+          return null;
+        }
+
+        // Update last active timestamp
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { lastActive: new Date() },
+        });
+
         return {
           id: user.id,
           email: user.email,

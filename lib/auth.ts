@@ -9,6 +9,8 @@ export interface CurrentUser {
   name?: string;
   profileImageUrl?: string;
   tenantId?: string;
+  role?: string;
+  status?: string;
 }
 
 export interface CurrentTenant {
@@ -42,6 +44,8 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
       name: user.name || undefined,
       profileImageUrl: user.profileImageUrl || undefined,
       tenantId: user.tenantId || undefined,
+      role: user.role || undefined,
+      status: user.status || undefined,
     };
   } catch (error) {
     console.error('Error getting current user:', error);
