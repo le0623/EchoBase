@@ -7,8 +7,16 @@ export async function POST(request: NextRequest) {
   try {
     const { user, tenant } = await requireTenant();
 
+    // Get user's role in this tenant
+    const userMembership = await prisma.tenantMember.findFirst({
+      where: {
+        userId: user.id,
+        tenantId: tenant.id,
+      },
+    });
+
     // Check if user has permission to upload documents
-    if (user.role !== 'ADMIN' && user.role !== 'MEMBER') {
+    if (!userMembership || (userMembership.role !== 'ADMIN' && userMembership.role !== 'MEMBER')) {
       return NextResponse.json(
         { error: 'Insufficient permissions to upload documents' },
         { status: 403 }

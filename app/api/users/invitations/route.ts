@@ -7,8 +7,16 @@ export async function GET(request: NextRequest) {
   try {
     const { user, tenant } = await requireTenant();
 
+    // Get user's role in this tenant
+    const userMembership = await prisma.tenantMember.findFirst({
+      where: {
+        userId: user.id,
+        tenantId: tenant.id,
+      },
+    });
+
     // Check if user has permission to view invitations
-    if (user.role !== 'ADMIN') {
+    if (!userMembership || userMembership.role !== 'ADMIN') {
       return NextResponse.json(
         { error: 'Insufficient permissions' },
         { status: 403 }

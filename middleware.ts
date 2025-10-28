@@ -1,47 +1,83 @@
 import { withAuth } from 'next-auth/middleware';
 import { NextRequest, NextResponse } from 'next/server';
+import { rootDomain } from '@/lib/utils';
+
+function extractSubdomain(request: NextRequest): string | null {
+  const url = request.url;
+  const host = request.headers.get('host') || '';
+  const hostname = host.split(':')[0];
+
+  // Local development environment
+  if (url.includes('localhost') || url.includes('127.0.0.1')) {
+    // Try to extract subdomain from the full URL
+    const fullUrlMatch = url.match(/http:\/\/([^.]+)\.localhost/);
+    if (fullUrlMatch && fullUrlMatch[1]) {
+      return fullUrlMatch[1];
+    }
+
+    // Fallback to host header approach
+    if (hostname.includes('.localhost')) {
+      return hostname.split('.')[0];
+    }
+
+    return null;
+  }
+
+  // Production environment
+  const rootDomainFormatted = rootDomain.split(':')[0];
+
+  // Handle preview deployment URLs (tenant---branch-name.vercel.app)
+  if (hostname.includes('---') && hostname.endsWith('.vercel.app')) {
+    const parts = hostname.split('---');
+    return parts.length > 0 ? parts[0] : null;
+  }
+
+  // Regular subdomain detection
+  const isSubdomain =
+    hostname !== rootDomainFormatted &&
+    hostname !== `www.${rootDomainFormatted}` &&
+    hostname.endsWith(`.${rootDomainFormatted}`);
+
+  return isSubdomain ? hostname.replace(`.${rootDomainFormatted}`, '') : null;
+}
 
 export default withAuth(
   function middleware(req) {
+
     const { pathname } = req.nextUrl;
-    const hostname = req.headers.get('host') || '';
-    
+    const subdomain = extractSubdomain(req);
+
     // Handle tenant subdomain routing
-    if (hostname.includes('.localhost:3000') || hostname.includes('.localhost')) {
-      const subdomain = hostname.split('.')[0];
-      
-      // If accessing tenant subdomain root, redirect to subdomain page
-      if (pathname === '/') {
-        return NextResponse.redirect(new URL(`http://${hostname}/s/${subdomain}`, req.url));
+    if (subdomain) {
+      // Block access to admin page from subdomains
+      if (pathname.startsWith('/admin')) {
+        return NextResponse.redirect(new URL('/', req.url));
       }
-      
-      // If accessing signin on tenant subdomain, ensure it goes to tenant-specific signin
-      if (pathname === '/signin' && subdomain) {
-        return NextResponse.redirect(new URL(`http://${hostname}/s/${subdomain}/signin`, req.url));
-      }
-      
-      // Allow tenant-specific signin and subdomain pages
-      if (pathname.startsWith('/signin') || pathname.startsWith('/s/')) {
+
+      if (pathname.startsWith('/api')) {
         return NextResponse.next();
       }
+
+      // For the root path on a subdomain, rewrite to the subdomain page
+      return NextResponse.rewrite(new URL(`/s/${subdomain}${pathname}`, req.url));
     }
-    
+
     return NextResponse.next();
   },
   {
     callbacks: {
       authorized: ({ token, req }) => {
         const { pathname } = req.nextUrl;
-        const hostname = req.headers.get('host') || '';
-        
+        const subdomain = extractSubdomain(req);
+
         // Allow access to signin page without authentication
         if (pathname.startsWith('/signin')) {
           return true;
         }
-        
+
         // Handle tenant subdomain signin
-        if (hostname.includes('.localhost:3000') || hostname.includes('.localhost')) {
-          if (pathname.startsWith('/signin') || pathname.startsWith('/dashboard')) {
+        if (subdomain) {
+          if (pathname.startsWith('/signin') || pathname.startsWith('/s/')) {
             // Check if user is authenticated
             return !!token;
           }
@@ -56,10 +92,6 @@ export default withAuth(
         }
         // Allow access to API routes
         if (pathname.startsWith('/api/')) {
-          return true;
-        }
-        // Allow access to subdomain pages (they handle their own auth)
-        if (pathname.startsWith('/s/')) {
           return true;
         }
         // Require authentication for all other routes

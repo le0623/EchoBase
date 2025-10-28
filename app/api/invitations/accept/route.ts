@@ -72,9 +72,7 @@ export async function POST(request: NextRequest) {
         email: invitation.email,
         name,
         password: hashedPassword,
-        role: invitation.role,
         status: 'ACTIVE',
-        tenantId: invitation.tenantId,
         invitationId: invitation.id,
         emailVerified: new Date(),
       },
@@ -82,9 +80,17 @@ export async function POST(request: NextRequest) {
         id: true,
         email: true,
         name: true,
-        role: true,
         status: true,
-        tenantId: true,
+      },
+    });
+
+    // Create tenant membership
+    await prisma.tenantMember.create({
+      data: {
+        userId: newUser.id,
+        tenantId: invitation.tenantId,
+        role: invitation.role,
+        isOwner: false,
       },
     });
 

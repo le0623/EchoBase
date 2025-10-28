@@ -2,15 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireTenant } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { sendInvitationEmail } from '@/lib/email';
-import { UserRole } from '@prisma/client';
+import { protocol, rootDomain } from '@/lib/utils';
 
 // POST /api/users/invite - Send invitation email
 export async function POST(request: NextRequest) {
   try {
     const { user, tenant } = await requireTenant();
 
+    // Get user's role in this tenant
+    const userMembership = await prisma.tenantMember.findFirst({
+      where: {
+        userId: user.id,
+        tenantId: tenant.id,
+      },
+    });
+
     // Check if user has permission to invite users
-    if (user.role !== 'ADMIN') {
+    if (!userMembership || userMembership.role !== 'ADMIN') {
       return NextResponse.json(
         { error: 'Insufficient permissions' },
         { status: 403 }
@@ -66,7 +74,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Generate invitation URL
-    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const baseUrl = `${protocol}://${rootDomain}`;
     const invitationUrl = `${baseUrl}/accept-invitation?token=${invitation.token}`;
 
     // Send invitation email

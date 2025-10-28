@@ -10,7 +10,6 @@ DATABASE_URL="postgresql://postgres:postgres@localhost:5433/echobase?schema=publ
 ### NextAuth.js
 ```bash
 NEXTAUTH_SECRET="your_nextauth_secret_here"
-NEXTAUTH_URL="http://localhost:3000"
 ```
 
 ## Microsoft Azure AD (Optional)

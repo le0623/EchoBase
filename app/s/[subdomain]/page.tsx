@@ -1,4 +1,5 @@
 import { notFound, redirect } from 'next/navigation';
+import Redirect from 'next/link';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-config';
 import { prisma } from '@/lib/prisma';
@@ -45,7 +46,7 @@ export default async function SubdomainPage({
 
   // If user is not authenticated, redirect to tenant-specific signin
   if (!session) {
-    redirect(`http://${subdomain}.localhost:3000/s/${subdomain}/signin`);
+    redirect(`/s/${subdomain}/signin`);
   }
 
   // Find the user by email
@@ -54,7 +55,7 @@ export default async function SubdomainPage({
   });
 
   if (!user) {
-    redirect(`http://${subdomain}.localhost:3000/s/${subdomain}/signin`);
+    redirect(`/s/${subdomain}/signin`);
   }
 
   // Check if user is a member of this tenant
@@ -69,9 +70,9 @@ export default async function SubdomainPage({
 
   if (!userMembership) {
     // User is not a member of this tenant, redirect to signin
-    redirect(`http://${subdomain}.localhost:3000/s/${subdomain}/signin`);
+    redirect(`/s/${subdomain}/signin`);
   }
 
   // User is authenticated and is a member, redirect to dashboard
-  redirect(`http://${subdomain}.localhost:3000/dashboard`);
+  redirect(`/dashboard`);
 }

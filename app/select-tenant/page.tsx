@@ -75,13 +75,13 @@ export default function SelectTenantPage() {
       {/* Right Side - Tenant Selection */}
       <div className="w-full lg:w-1/2 bg-white flex flex-col justify-center min-h-screen max-h-screen overflow-y-auto">
         <div className="flex flex-col items-center w-full p-8 lg:p-12">
-          <h2 className="text-4xl font-extrabold mb-3">Select Organization</h2>
+          <h2 className="text-4xl font-extrabold mb-3">Select App</h2>
           <p className="body-md text-[#676767] mb-6">
             {hasNoTenants 
-              ? 'Create your organization to get started' 
+              ? 'Create your app to get started' 
               : hasInvitedOrganizations && !hasOwnOrganization
-              ? 'Choose an organization to enter or create your own'
-              : 'Choose which organization to enter'}
+              ? 'Choose an app to enter or create your own'
+              : 'Choose which app to enter'}
           </p>
 
           {error && (

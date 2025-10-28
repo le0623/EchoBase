@@ -1,18 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireTenant } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { UserRole, UserStatus } from '@prisma/client';
 
 // GET /api/users/[userId] - Get a specific user
 export async function GET(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
+    const { userId } = await params;
     const { user, tenant } = await requireTenant();
 
+    // Get user's role in this tenant
+    const userMembership = await prisma.tenantMember.findFirst({
+      where: {
+        userId: user.id,
+        tenantId: tenant.id,
+      },
+    });
+
     // Check if user has permission to view users
-    if (user.role !== 'ADMIN') {
+    if (!userMembership || userMembership.role !== 'ADMIN') {
       return NextResponse.json(
         { error: 'Insufficient permissions' },
         { status: 403 }
@@ -21,8 +29,12 @@ export async function GET(
 
     const targetUser = await prisma.user.findFirst({
       where: {
-        id: params.userId,
-        tenantId: tenant.id,
+        id: userId,
+        tenants: {
+          some: {
+            tenantId: tenant.id,
+          },
+        },
       },
       select: {
         id: true,
@@ -30,10 +42,18 @@ export async function GET(
         name: true,
         profileImageUrl: true,
         status: true,
-        role: true,
         lastActive: true,
         createdAt: true,
         updatedAt: true,
+        tenants: {
+          where: {
+            tenantId: tenant.id,
+          },
+          select: {
+            role: true,
+            isOwner: true,
+          },
+        },
       },
     });
 
@@ -44,7 +64,13 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ user: targetUser });
+    return NextResponse.json({ 
+      user: {
+        ...targetUser,
+        role: targetUser.tenants[0]?.role,
+        isOwner: targetUser.tenants[0]?.isOwner,
+      }
+    });
   } catch (error) {
     console.error('Error fetching user:', error);
     return NextResponse.json(
@@ -57,13 +83,22 @@ export async function GET(
 // PUT /api/users/[userId] - Update a user
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
+    const { userId } = await params;
     const { user, tenant } = await requireTenant();
 
+    // Get user's role in this tenant
+    const userMembership = await prisma.tenantMember.findFirst({
+      where: {
+        userId: user.id,
+        tenantId: tenant.id,
+      },
+    });
+
     // Check if user has permission to update users
-    if (user.role !== 'ADMIN') {
+    if (!userMembership || userMembership.role !== 'ADMIN') {
       return NextResponse.json(
         { error: 'Insufficient permissions' },
         { status: 403 }
@@ -92,8 +127,19 @@ export async function PUT(
     // Check if user exists and belongs to tenant
     const targetUser = await prisma.user.findFirst({
       where: {
-        id: params.userId,
-        tenantId: tenant.id,
+        id: userId,
+        tenants: {
+          some: {
+            tenantId: tenant.id,
+          },
+        },
+      },
+      include: {
+        tenants: {
+          where: {
+            tenantId: tenant.id,
+          },
+        },
       },
     });
 
@@ -105,7 +151,7 @@ export async function PUT(
     }
 
     // Prevent users from updating themselves to inactive
-    if (user.id === params.userId && status === 'INACTIVE') {
+    if (user.id === userId && status === 'INACTIVE') {
       return NextResponse.json(
         { error: 'Cannot deactivate your own account' },
         { status: 400 }
@@ -114,11 +160,10 @@ export async function PUT(
 
     // Update user
     const updatedUser = await prisma.user.update({
-      where: { id: params.userId },
+      where: { id: userId },
       data: {
         ...(name && { name }),
-        ...(role && { role: role as UserRole }),
-        ...(status && { status: status as UserStatus }),
+        ...(status && { status: status }),
       },
       select: {
         id: true,
@@ -126,14 +171,41 @@ export async function PUT(
         name: true,
         profileImageUrl: true,
         status: true,
-        role: true,
         lastActive: true,
         createdAt: true,
         updatedAt: true,
+        tenants: {
+          where: {
+            tenantId: tenant.id,
+          },
+          select: {
+            role: true,
+            isOwner: true,
+          },
+        },
       },
     });
 
-    return NextResponse.json({ user: updatedUser });
+    // Update role if provided
+    if (role) {
+      await prisma.tenantMember.updateMany({
+        where: {
+          userId: userId,
+          tenantId: tenant.id,
+        },
+        data: {
+          role: role,
+        },
+      });
+    }
+
+    return NextResponse.json({ 
+      user: {
+        ...updatedUser,
+        role: updatedUser.tenants[0]?.role,
+        isOwner: updatedUser.tenants[0]?.isOwner,
+      }
+    });
   } catch (error) {
     console.error('Error updating user:', error);
     return NextResponse.json(
@@ -146,13 +218,22 @@ export async function PUT(
 // DELETE /api/users/[userId] - Delete a user
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
+    const { userId } = await params;
     const { user, tenant } = await requireTenant();
 
+    // Get user's role in this tenant
+    const userMembership = await prisma.tenantMember.findFirst({
+      where: {
+        userId: user.id,
+        tenantId: tenant.id,
+      },
+    });
+
     // Check if user has permission to delete users
-    if (user.role !== 'ADMIN') {
+    if (!userMembership || userMembership.role !== 'ADMIN') {
       return NextResponse.json(
         { error: 'Insufficient permissions' },
         { status: 403 }
@@ -160,7 +241,7 @@ export async function DELETE(
     }
 
     // Prevent users from deleting themselves
-    if (user.id === params.userId) {
+    if (user.id === userId) {
       return NextResponse.json(
         { error: 'Cannot delete your own account' },
         { status: 400 }
@@ -170,8 +251,12 @@ export async function DELETE(
     // Check if user exists and belongs to tenant
     const targetUser = await prisma.user.findFirst({
       where: {
-        id: params.userId,
-        tenantId: tenant.id,
+        id: userId,
+        tenants: {
+          some: {
+            tenantId: tenant.id,
+          },
+        },
       },
     });
 
@@ -182,9 +267,12 @@ export async function DELETE(
       );
     }
 
-    // Delete user
-    await prisma.user.delete({
-      where: { id: params.userId },
+    // Remove user from tenant (but don't delete the user completely as they might belong to other tenants)
+    await prisma.tenantMember.deleteMany({
+      where: {
+        userId: userId,
+        tenantId: tenant.id,
+      },
     });
 
     return NextResponse.json({ message: 'User deleted successfully' });

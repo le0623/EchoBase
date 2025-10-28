@@ -54,7 +54,7 @@ export default function TenantSignInPage() {
     setError('');
 
     try {
-      await signIn('azure-ad', { 
+      await signIn('azure-ad', {
         callbackUrl: `http://${subdomain}.localhost:3000/dashboard`
       });
     } catch (error) {
@@ -148,9 +148,9 @@ export default function TenantSignInPage() {
                 <span>{error}</span>
               </div>
             )}
-            
-            <button 
-              type="submit" 
+
+            <button
+              type="submit"
               className="w-full bg-[#1d1d1d] text-white py-4 rounded-lg font-semibold text-lg hover:bg-[#2d2d2d] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isLoading || !email || !password}
             >

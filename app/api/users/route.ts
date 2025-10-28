@@ -1,15 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireTenant } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { UserRole, UserStatus } from '@prisma/client';
 
 // GET /api/users - Get all users in the tenant
 export async function GET(request: NextRequest) {
   try {
     const { user, tenant } = await requireTenant();
 
+    // Get user's role in this tenant
+    const userMembership = await prisma.tenantMember.findFirst({
+      where: {
+        userId: user.id,
+        tenantId: tenant.id,
+      },
+    });
+
     // Check if user has permission to view users (admin only for now)
-    if (user.role !== 'ADMIN') {
+    if (!userMembership || userMembership.role !== 'ADMIN') {
       return NextResponse.json(
         { error: 'Insufficient permissions' },
         { status: 403 }
@@ -18,7 +25,11 @@ export async function GET(request: NextRequest) {
 
     const users = await prisma.user.findMany({
       where: {
-        tenantId: tenant.id,
+        tenants: {
+          some: {
+            tenantId: tenant.id,
+          },
+        },
       },
       select: {
         id: true,
@@ -26,17 +37,31 @@ export async function GET(request: NextRequest) {
         name: true,
         profileImageUrl: true,
         status: true,
-        role: true,
         lastActive: true,
         createdAt: true,
         updatedAt: true,
+        tenants: {
+          where: {
+            tenantId: tenant.id,
+          },
+          select: {
+            role: true,
+            isOwner: true,
+          },
+        },
       },
       orderBy: {
         createdAt: 'desc',
       },
     });
 
-    return NextResponse.json({ users });
+    return NextResponse.json({ 
+      users: users.map(user => ({
+        ...user,
+        role: user.tenants[0]?.role,
+        isOwner: user.tenants[0]?.isOwner,
+      }))
+    });
   } catch (error) {
     console.error('Error fetching users:', error);
     return NextResponse.json(
@@ -51,8 +76,16 @@ export async function POST(request: NextRequest) {
   try {
     const { user, tenant } = await requireTenant();
 
+    // Get user's role in this tenant
+    const userMembership = await prisma.tenantMember.findFirst({
+      where: {
+        userId: user.id,
+        tenantId: tenant.id,
+      },
+    });
+
     // Check if user has permission to invite users
-    if (user.role !== 'ADMIN') {
+    if (!userMembership || userMembership.role !== 'ADMIN') {
       return NextResponse.json(
         { error: 'Insufficient permissions' },
         { status: 403 }
@@ -114,7 +147,7 @@ export async function POST(request: NextRequest) {
     const invitation = await prisma.userInvitation.create({
       data: {
         email,
-        role: role as UserRole,
+        role: role,
         token,
         invitedBy: user.id,
         tenantId: tenant.id,

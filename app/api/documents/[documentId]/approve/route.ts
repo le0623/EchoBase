@@ -5,13 +5,21 @@ import { prisma } from '@/lib/prisma';
 // POST /api/documents/[documentId]/approve - Approve a document
 export async function POST(
   request: NextRequest,
-  { params }: { params: { documentId: string } }
+  { params }: { params: Promise<{ documentId: string }> }
 ) {
   try {
+    const { documentId } = await params;
     const { user, tenant } = await requireTenant();
 
-    // Only admins can approve documents
-    if (user.role !== 'ADMIN') {
+    // Get user's role in this tenant
+    const userMembership = await prisma.tenantMember.findFirst({
+      where: {
+        userId: user.id,
+        tenantId: tenant.id,
+      },
+    });
+
+    if (!userMembership || userMembership.role !== 'ADMIN') {
       return NextResponse.json(
         { error: 'Only administrators can approve documents' },
         { status: 403 }
@@ -21,7 +29,7 @@ export async function POST(
     // Check if document exists and belongs to tenant
     const document = await prisma.document.findFirst({
       where: {
-        id: params.documentId,
+        id: documentId,
         tenantId: tenant.id,
       },
     });
@@ -43,7 +51,7 @@ export async function POST(
 
     // Approve document
     const approvedDocument = await prisma.document.update({
-      where: { id: params.documentId },
+      where: { id: documentId },
       data: {
         status: 'APPROVED',
         approvedBy: user.id,

@@ -29,7 +29,6 @@ WORKOS_REDIRECT_URI="http://localhost:3000/api/auth/callback"
 WORKOS_COOKIE_PASSWORD="your-32-character-secret-key-here"
 
 # Next.js
-NEXTAUTH_URL="http://localhost:3000"
 NEXTAUTH_SECRET="your-nextauth-secret-key-here"
 ```
 

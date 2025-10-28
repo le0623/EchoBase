@@ -19,7 +19,11 @@ export const api = {
     
     const users = await prisma.user.findMany({
       where: {
-        tenantId: tenant.id,
+        tenants: {
+          some: {
+            tenantId: tenant.id,
+          },
+        },
       },
       select: {
         id: true,
@@ -27,25 +31,38 @@ export const api = {
         name: true,
         profileImageUrl: true,
         createdAt: true,
+        tenants: {
+          where: {
+            tenantId: tenant.id,
+          },
+          select: {
+            role: true,
+            isOwner: true,
+          },
+        },
       },
       orderBy: {
         createdAt: 'desc',
       },
     });
 
-    return users;
+    return users.map(user => ({
+      ...user,
+      role: user.tenants[0]?.role,
+      isOwner: user.tenants[0]?.isOwner,
+    }));
   },
 
   async getUserStats() {
     const { tenant } = await requireTenant();
     
-    const userCount = await prisma.user.count({
+    const userCount = await prisma.tenantMember.count({
       where: {
         tenantId: tenant.id,
       },
     });
 
-    const recentUsers = await prisma.user.count({
+    const recentUsers = await prisma.tenantMember.count({
       where: {
         tenantId: tenant.id,
         createdAt: {

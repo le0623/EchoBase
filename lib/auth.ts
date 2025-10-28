@@ -8,15 +8,13 @@ export interface CurrentUser {
   email: string;
   name?: string;
   profileImageUrl?: string;
-  tenantId?: string;
-  role?: string;
   status?: string;
 }
 
 export interface CurrentTenant {
   id: string;
   name: string;
-  domain?: string;
+  subdomain: string;
   logoUrl?: string;
 }
 
@@ -43,8 +41,6 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
       email: user.email,
       name: user.name || undefined,
       profileImageUrl: user.profileImageUrl || undefined,
-      tenantId: user.tenantId || undefined,
-      role: user.role || undefined,
       status: user.status || undefined,
     };
   } catch (error) {
@@ -53,27 +49,30 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   }
 }
 
-export async function getCurrentTenant(user: CurrentUser): Promise<CurrentTenant | null> {
-  if (!user.tenantId) {
-    return null;
-  }
-
+export async function getCurrentTenant(subdomain?: string): Promise<CurrentTenant | null> {
   try {
-    const tenant = await prisma.tenant.findUnique({
-      where: {
-        id: user.tenantId,
-      },
-    });
+    // If subdomain is provided, find tenant by subdomain
+    if (subdomain) {
+      const tenant = await prisma.tenant.findUnique({
+        where: {
+          subdomain: subdomain,
+        },
+      });
 
-    if (!tenant) {
-      return null;
+      if (!tenant) {
+        return null;
+      }
+
+      return {
+        id: tenant.id,
+        name: tenant.name,
+        subdomain: tenant.subdomain,
+        logoUrl: tenant.logoUrl || undefined,
+      };
     }
 
-    return {
-      id: tenant.id,
-      name: tenant.name,
-      logoUrl: tenant.logoUrl || undefined,
-    };
+    // If no subdomain, return null (user needs to select a tenant)
+    return null;
   } catch (error) {
     console.error('Error getting current tenant:', error);
     return null;
@@ -81,14 +80,15 @@ export async function getCurrentTenant(user: CurrentUser): Promise<CurrentTenant
 }
 
 export async function withTenantGuard<T>(
-  handler: (user: CurrentUser, tenant: CurrentTenant) => Promise<T>
+  handler: (user: CurrentUser, tenant: CurrentTenant) => Promise<T>,
+  subdomain?: string
 ): Promise<T | null> {
   const user = await getCurrentUser();
   if (!user) {
     redirect('/signin');
   }
 
-  const tenant = await getCurrentTenant(user);
+  const tenant = await getCurrentTenant(subdomain);
   if (!tenant) {
     redirect('/signin');
   }
@@ -104,11 +104,34 @@ export async function requireAuth(): Promise<CurrentUser> {
   return user;
 }
 
-export async function requireTenant(): Promise<{ user: CurrentUser; tenant: CurrentTenant }> {
+export async function requireTenant(subdomain?: string): Promise<{ user: CurrentUser; tenant: CurrentTenant }> {
   const user = await requireAuth();
-  const tenant = await getCurrentTenant(user);
+  const tenant = await getCurrentTenant(subdomain);
   if (!tenant) {
     redirect('/signin');
   }
+  
+  // Check if user has access to this tenant
+  const hasAccess = await checkUserTenantAccess(user.id, tenant.id);
+  if (!hasAccess) {
+    redirect('/signin');
+  }
+  
   return { user, tenant };
+}
+
+export async function checkUserTenantAccess(userId: string, tenantId: string): Promise<boolean> {
+  try {
+    const membership = await prisma.tenantMember.findFirst({
+      where: {
+        userId: userId,
+        tenantId: tenantId,
+      },
+    });
+    
+    return !!membership;
+  } catch (error) {
+    console.error('Error checking user tenant access:', error);
+    return false;
+  }
 }

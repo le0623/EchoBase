@@ -6,14 +6,15 @@ import { deleteFromS3 } from '@/lib/s3';
 // GET /api/documents/[documentId] - Get a specific document
 export async function GET(
   request: NextRequest,
-  { params }: { params: { documentId: string } }
+  { params }: { params: Promise<{ documentId: string }> }
 ) {
   try {
+    const { documentId } = await params;
     const { user, tenant } = await requireTenant();
 
     const document = await prisma.document.findFirst({
       where: {
-        id: params.documentId,
+        id: documentId,
         tenantId: tenant.id,
       },
       include: {
@@ -84,9 +85,10 @@ export async function GET(
 // PUT /api/documents/[documentId] - Update document metadata
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { documentId: string } }
+  { params }: { params: Promise<{ documentId: string }> }
 ) {
   try {
+    const { documentId } = await params;
     const { user, tenant } = await requireTenant();
 
     const body = await request.json();
@@ -95,7 +97,7 @@ export async function PUT(
     // Check if user has permission to update document
     const document = await prisma.document.findFirst({
       where: {
-        id: params.documentId,
+        id: documentId,
         tenantId: tenant.id,
       },
     });
@@ -107,8 +109,16 @@ export async function PUT(
       );
     }
 
+    // Get user's role in this tenant
+    const userMembership = await prisma.tenantMember.findFirst({
+      where: {
+        userId: user.id,
+        tenantId: tenant.id,
+      },
+    });
+
     // Only document submitter or admin can update document metadata
-    if (document.submittedBy !== user.id && user.role !== 'ADMIN') {
+    if (document.submittedBy !== user.id && (!userMembership || userMembership.role !== 'ADMIN')) {
       return NextResponse.json(
         { error: 'Insufficient permissions to update document' },
         { status: 403 }
@@ -120,7 +130,7 @@ export async function PUT(
 
     // Update document
     const updatedDocument = await prisma.document.update({
-      where: { id: params.documentId },
+      where: { id: documentId },
       data: {
         ...(name && { name: name.trim() }),
         ...(description !== undefined && { description: description?.trim() || null }),
@@ -188,15 +198,16 @@ export async function PUT(
 // DELETE /api/documents/[documentId] - Delete document
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { documentId: string } }
+  { params }: { params: Promise<{ documentId: string }> }
 ) {
   try {
+    const { documentId } = await params;
     const { user, tenant } = await requireTenant();
 
     // Check if user has permission to delete document
     const document = await prisma.document.findFirst({
       where: {
-        id: params.documentId,
+        id: documentId,
         tenantId: tenant.id,
       },
     });
@@ -208,8 +219,16 @@ export async function DELETE(
       );
     }
 
+    // Get user's role in this tenant
+    const userMembership = await prisma.tenantMember.findFirst({
+      where: {
+        userId: user.id,
+        tenantId: tenant.id,
+      },
+    });
+
     // Only document submitter or admin can delete document
-    if (document.submittedBy !== user.id && user.role !== 'ADMIN') {
+    if (document.submittedBy !== user.id && (!userMembership || userMembership.role !== 'ADMIN')) {
       return NextResponse.json(
         { error: 'Insufficient permissions to delete document' },
         { status: 403 }
@@ -221,7 +240,7 @@ export async function DELETE(
 
     // Delete from database
     await prisma.document.delete({
-      where: { id: params.documentId },
+      where: { id: documentId },
     });
 
     return NextResponse.json({

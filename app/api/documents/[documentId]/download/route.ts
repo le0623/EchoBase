@@ -6,15 +6,16 @@ import { getSignedDownloadUrl } from '@/lib/s3';
 // GET /api/documents/[documentId]/download - Get download URL for a document
 export async function GET(
   request: NextRequest,
-  { params }: { params: { documentId: string } }
+  { params }: { params: Promise<{ documentId: string }> }
 ) {
   try {
+    const { documentId } = await params;
     const { user, tenant } = await requireTenant();
 
     // Get document
     const document = await prisma.document.findFirst({
       where: {
-        id: params.documentId,
+        id: documentId,
         tenantId: tenant.id,
       },
     });
@@ -26,8 +27,16 @@ export async function GET(
       );
     }
 
+    // Get user's role in this tenant
+    const userMembership = await prisma.tenantMember.findFirst({
+      where: {
+        userId: user.id,
+        tenantId: tenant.id,
+      },
+    });
+
     // Check permissions - users can download their own documents or admins can download any document
-    if (document.submittedBy !== user.id && user.role !== 'ADMIN') {
+    if (document.submittedBy !== user.id && (!userMembership || userMembership.role !== 'ADMIN')) {
       return NextResponse.json(
         { error: 'Insufficient permissions to download this document' },
         { status: 403 }

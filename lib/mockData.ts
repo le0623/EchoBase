@@ -6,7 +6,7 @@ export const mockRootProps = {
     name: "Emmy Watson",
     email: "emmy.watson@example.com",
     role: UserRole.ADMIN as const,
-    avatar: "/images/avatar-user.png"
+    avatar: "/images/avatar.jpg"
   }
 };
 
