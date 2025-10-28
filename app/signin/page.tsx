@@ -121,7 +121,7 @@ function SignInForm() {
       {/* Left Side - Hero Image */}
       <div className="hidden lg:flex lg:w-1/2 p-12 flex-col justify-center bg-white">
         <Image
-          src="/images/sign-hero.png"
+          src="/images/bot.png"
           alt="Sign In Hero"
           width={916}
           height={909}

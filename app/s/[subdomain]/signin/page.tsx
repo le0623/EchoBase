@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect } from 'react';
+import { rootDomain } from '@/lib/utils';
 
 export default function TenantSignInPage() {
   const [email, setEmail] = useState('');
@@ -55,7 +56,7 @@ export default function TenantSignInPage() {
 
     try {
       await signIn('azure-ad', {
-        callbackUrl: `http://${subdomain}.localhost:3000/dashboard`
+        callbackUrl: `http://${subdomain}.${rootDomain}/dashboard`
       });
     } catch (error) {
       setError('An error occurred. Please try again.');
@@ -68,7 +69,7 @@ export default function TenantSignInPage() {
       {/* Left Side - Hero Image */}
       <div className="hidden lg:flex lg:w-1/2 p-12 flex-col justify-center bg-white">
         <Image
-          src="/images/sign-hero.png"
+          src="/images/bot.png"
           alt="Sign In Hero"
           width={916}
           height={909}

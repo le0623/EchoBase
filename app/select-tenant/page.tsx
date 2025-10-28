@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { rootDomain } from '@/lib/utils';
 
 type Tenant = {
   id: string;
@@ -46,7 +47,7 @@ export default function SelectTenantPage() {
   const handleSelectTenant = (tenantId: string, subdomain: string | null) => {
     if (subdomain) {
       // Redirect to tenant subdomain
-      window.location.href = `http://${subdomain}.localhost:3000`;
+      window.location.href = `http://${subdomain}.${rootDomain}`;
     } else {
       // Redirect to dashboard with tenant ID
       router.push(`/dashboard?tenant=${tenantId}`);
@@ -62,7 +63,7 @@ export default function SelectTenantPage() {
       {/* Left Side - Hero Image */}
       <div className="hidden lg:flex lg:w-1/2 p-12 flex-col justify-center bg-white">
         <Image
-          src="/images/sign-hero.png"
+          src="/images/bot.png"
           alt="Select Tenant"
           width={916}
           height={909}
