@@ -1,4 +1,4 @@
-import { baseUrl, protocol } from "./utils";
+import { protocol, rootDomain } from "./utils";
 
 /**
 * Utility functions for URL handling in multi-tenant applications
@@ -11,8 +11,7 @@ import { baseUrl, protocol } from "./utils";
  * @returns The full tenant URL
  */
 export const getTenantUrl = (subdomain: string, path: string = ''): string => {
-  const baseHostname = baseUrl.replace(/^https?:\/\//, '');
-  const tenantHostname = `${subdomain}.${baseHostname}`;
+  const tenantHostname = `${subdomain}.${rootDomain}`;
 
   return `${protocol}://${tenantHostname}${path}`;
 };

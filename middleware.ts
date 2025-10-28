@@ -23,16 +23,30 @@ function extractSubdomain(request: NextRequest): string | null {
     return null;
   }
 
-  // Production environment
+  // Production environment - Handle Vercel domains
   const rootDomainFormatted = rootDomain.split(':')[0];
 
-  // Handle preview deployment URLs (tenant---branch-name.vercel.app)
+  // Handle Vercel preview deployments (tenant---branch-name.vercel.app)
   if (hostname.includes('---') && hostname.endsWith('.vercel.app')) {
     const parts = hostname.split('---');
     return parts.length > 0 ? parts[0] : null;
   }
 
-  // Regular subdomain detection
+  // Handle Vercel production domain (echobase.vercel.app)
+  if (hostname === rootDomain) {
+    return null; // This is the main domain
+  }
+
+  // Handle Vercel subdomains ([subdomain].echobase.vercel.app)
+  if (hostname.endsWith(`.${rootDomain}`)) {
+    const subdomain = hostname.replace(`.${rootDomain}`, '');
+    // Ensure it's not www or other reserved subdomains
+    if (subdomain && subdomain !== 'www' && subdomain !== 'api') {
+      return subdomain;
+    }
+  }
+
+  // Handle custom domain subdomains
   const isSubdomain =
     hostname !== rootDomainFormatted &&
     hostname !== `www.${rootDomainFormatted}` &&
