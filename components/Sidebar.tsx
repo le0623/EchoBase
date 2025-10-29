@@ -28,7 +28,7 @@ const navItems = [
   { id: 'approval', label: 'Document Approval', icon: ApprovalIcon, active: false },
   { id: 'search', label: 'AI-Powerd Search', icon: LightningIcon, active: false },
   { id: 'billing', label: 'Billing & Usage', icon: BillingIcon, active: false },
-  { id: 'api-keys', label: 'API Key', icon: KeyIcon, active: false },
+  { id: 'integration', label: 'API Key', icon: KeyIcon, active: false },
   { id: 'settings', label: 'Settings', icon: SettingsIcon, active: false },
 ];
 
