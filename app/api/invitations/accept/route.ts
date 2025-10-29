@@ -72,7 +72,6 @@ export async function POST(request: NextRequest) {
         email: invitation.email,
         name,
         password: hashedPassword,
-        status: 'ACTIVE',
         invitationId: invitation.id,
         emailVerified: new Date(),
       },

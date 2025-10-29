@@ -22,7 +22,7 @@ model User {
   lastActive       DateTime @default(now()) @map("last_active")
   
   // User status
-  status           UserStatus @default(PENDING)
+  status           UserStatus @default(ACTIVE)
   
   // Multi-tenant relationship - users can belong to multiple tenants
   tenants          TenantMember[]
