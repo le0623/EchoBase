@@ -1,94 +1,100 @@
 "use client";
 
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import UsersTab from "./components/user-management-user";
 import RolesTab from "./components/user-management-roles";
 import PendingInvitesTab from "./components/user-management-pending-invites";
+import InviteUserModal from "./components/invite-user-modal";
+import { Button } from "@/components/ui/button";
+import { PlusIcon } from "lucide-react";
+
+interface Stats {
+  total: number;
+  pending: number;
+  active: number;
+  admin: number;
+}
 
 export default function Users() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [stats, setStats] = useState<Stats>({
+    total: 0,
+    pending: 0,
+    active: 0,
+    admin: 0,
+  });
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
 
-  const stats = [
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      setIsLoadingStats(true);
+      const response = await fetch("/api/users");
+      if (response.ok) {
+        const data = await response.json();
+        const users = data.users || [];
+        
+        const total = users.length;
+        const active = users.filter((u: any) => u.status === "ACTIVE").length;
+        const admin = users.filter((u: any) => u.role === "ADMIN").length;
+        
+        // Fetch pending invitations
+        let pending = 0;
+        try {
+          const invitesResponse = await fetch("/api/users/invitations?status=PENDING");
+          if (invitesResponse.ok) {
+            const invitesData = await invitesResponse.json();
+            pending = invitesData.invitations?.length || 0;
+          }
+        } catch (err) {
+          console.error("Failed to fetch invitations:", err);
+        }
+        
+        setStats({ total, pending, active, admin });
+      }
+    } catch (err) {
+      console.error("Failed to fetch stats:", err);
+    } finally {
+      setIsLoadingStats(false);
+    }
+  };
+
+  const statsData = [
     {
       label: "Total Users",
-      value: 248,
-      change: "23%",
+      value: isLoadingStats ? "..." : stats.total,
+      change: "0%",
       icon: "/images/icons/arrow-upward.svg",
       color: "text-green-600",
     },
     {
       label: "Pending Invites",
-      value: 231,
-      change: "75%",
+      value: isLoadingStats ? "..." : stats.pending,
+      change: "0%",
       icon: "/images/icons/arrow-upward.svg",
       color: "text-green-600",
     },
     {
       label: "Active Users",
-      value: 17,
-      change: "10%",
+      value: isLoadingStats ? "..." : stats.active,
+      change: "0%",
       icon: "/images/icons/arrow-upward.svg",
       color: "text-green-600",
     },
     {
       label: "Admin Users",
-      value: 12,
-      change: "8%",
+      value: isLoadingStats ? "..." : stats.admin,
+      change: "0%",
       icon: "/images/icons/arrow-downward.svg",
       color: "text-red-600",
     },
   ];
 
-  const users = [
-    {
-      id: 1,
-      name: "John Doe",
-      email: "john@example.com",
-      phone: "+1 234 567 8900",
-      status: "Active",
-      joinDate: "2024-01-15",
-    },
-    {
-      id: 2,
-      name: "Jane Smith",
-      email: "jane@example.com",
-      phone: "+1 234 567 8901",
-      status: "Active",
-      joinDate: "2024-02-20",
-    },
-    {
-      id: 3,
-      name: "Bob Johnson",
-      email: "bob@example.com",
-      phone: "+1 234 567 8902",
-      status: "Inactive",
-      joinDate: "2024-01-10",
-    },
-    {
-      id: 4,
-      name: "Alice Williams",
-      email: "alice@example.com",
-      phone: "+1 234 567 8903",
-      status: "Active",
-      joinDate: "2024-03-05",
-    },
-    {
-      id: 5,
-      name: "Charlie Brown",
-      email: "charlie@example.com",
-      phone: "+1 234 567 8904",
-      status: "Active",
-      joinDate: "2024-02-28",
-    },
-  ];
-
-  const filteredUsers = users.filter(
-    (user) =>
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
   const [activeTab, setActiveTab] = useState("users");
 
   const tabs = [
@@ -96,6 +102,11 @@ export default function Users() {
     { id: "roles", label: "Role and Permission" },
     { id: "invites", label: "Pending Invites" },
   ];
+
+  const handleInviteSuccess = () => {
+    // Refresh stats after successful invitation
+    fetchStats();
+  };
 
   return (
     <div className="flex flex-col">
@@ -128,18 +139,19 @@ export default function Users() {
                       organization
                     </p>
                   </div>
-                  <a
-                    href="#"
+                  <Button
                     className="btn btn-secondary !inline-flex gap-1 !justify-start"
+                    onClick={() => setIsInviteModalOpen(true)}
                   >
-                    <Image
-                      src="/images/icons/plus.svg"
-                      alt="Plus Icon"
-                      width={16}
-                      height={16}
-                    />
+                    <PlusIcon className="w-4 h-4" />
                     Invite User
-                  </a>
+                  </Button>
+                  
+                  <InviteUserModal
+                    open={isInviteModalOpen}
+                    onOpenChange={setIsInviteModalOpen}
+                    onInviteSuccess={handleInviteSuccess}
+                  />
                 </div>
               </div>
             </div>
@@ -148,7 +160,7 @@ export default function Users() {
         <div className="lg:w-2/5 w-full px-3">
           <div className="rounded-xl border light-border bg-white h-full p-4">
             <ul className="flex flex-wrap justify-between items-center sm:[&>*:nth-of-type(2n+1)]:border-r sm:[&>*:not(:nth-last-child(-n+2))]:border-b [&>*]:border-gray-200">
-              {stats.map((stat, index) => (
+              {statsData.map((stat, index) => (
                 <li
                   key={index}
                   className="sm:w-1/2 w-full px-6 py-5 flex flex-col items-start"
@@ -234,7 +246,14 @@ export default function Users() {
             <div className="tab-content">
               {activeTab === "users" && <UsersTab />}
               {activeTab === "roles" && <RolesTab />}
-              {activeTab === "invites" && <PendingInvitesTab />}
+              {activeTab === "invites" && (
+                <PendingInvitesTab
+                  onInvitationUpdate={() => {
+                    // Refresh stats when invitations are updated
+                    fetchStats();
+                  }}
+                />
+              )}
             </div>
           </div>
         </div>

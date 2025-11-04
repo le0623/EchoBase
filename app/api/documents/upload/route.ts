@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Check if user has permission to upload documents
-    if (!userMembership || (userMembership.role !== 'ADMIN' && userMembership.role !== 'MEMBER')) {
+    if (!userMembership || (userMembership.role !== 'ADMIN' && userMembership.role !== 'EDITOR')) {
       return NextResponse.json(
         { error: 'Insufficient permissions to upload documents' },
         { status: 403 }

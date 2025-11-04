@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, ChangeEvent, useCallback } from "react";
+import { useState, ChangeEvent, useCallback, useRef } from "react";
 import { formatFileSize } from "@/lib/s3";
+import { TagsInput } from "@/components/extension/tags-input";
 
 interface ProcessingStep {
   name: string;
@@ -12,14 +13,55 @@ export default function DocumentUpload() {
   const [files, setFiles] = useState<File[]>([]);
   const [documentName, setDocumentName] = useState("");
   const [description, setDescription] = useState("");
-  const [tags, setTags] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState("");
   const [processingSteps, setProcessingSteps] = useState<ProcessingStep[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const newFiles = Array.from(e.target.files || []);
     setFiles((prev) => [...prev, ...newFiles]);
+    // Reset input value to allow selecting the same file again
+    if (e.target) {
+      e.target.value = '';
+    }
+  };
+
+  const handleFileSelect = (selectedFiles: File[]) => {
+    setFiles((prev) => [...prev, ...selectedFiles]);
+  };
+
+  const handleDropAreaClick = () => {
+    if (!isUploading && fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isUploading) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    if (isUploading) return;
+
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    handleFileSelect(droppedFiles);
   };
 
   const removeFile = (index: number) => {
@@ -53,13 +95,14 @@ export default function DocumentUpload() {
     ]);
 
     try {
-      // Upload each file
-      for (const file of files) {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('name', documentName);
-        formData.append('description', description);
-        formData.append('tags', tags);
+             // Upload each file
+       for (const file of files) {
+         const formData = new FormData();
+         formData.append('file', file);
+         formData.append('name', documentName);
+         formData.append('description', description);
+         // Convert tags array to comma-separated string for the API
+         formData.append('tags', tags.join(','));
 
         // Start upload
         const response = await fetch('/api/documents/upload', {
@@ -90,12 +133,12 @@ export default function DocumentUpload() {
         }
       }
 
-      // Success - clear form
-      setFiles([]);
-      setDocumentName("");
-      setDescription("");
-      setTags("");
-      setProcessingSteps([]);
+             // Success - clear form
+       setFiles([]);
+       setDocumentName("");
+       setDescription("");
+       setTags([]);
+       setProcessingSteps([]);
       
       alert('Documents uploaded successfully!');
     } catch (err: any) {
@@ -163,26 +206,34 @@ export default function DocumentUpload() {
               />
             </div>
 
-            {/* Tags Input */}
-            <div>
-              <label className="block text-base font-medium text-gray-700 mb-2">
-                Tags (comma-separated)
-              </label>
-              <input
-                type="text"
-                value={tags}
-                onChange={(e) => setTags(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="tag1, tag2, tag3"
-                disabled={isUploading}
-              />
-            </div>
+                         {/* Tags Input */}
+             <div>
+               <label className="block text-base font-medium text-gray-700 mb-2">
+                 Tags
+               </label>
+               <TagsInput
+                 value={tags}
+                 onValueChange={setTags}
+                 placeholder="Enter tags and press Enter"
+                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+               />
+             </div>
 
             {/* Drop Area */}
             <div className="space-y-5">
               <div
                 id="drop-area"
-                className="w-full p-10 mx-auto border-2 border-dashed border-gray-200 rounded-2xl text-center bg-white transition hover:border-gray-400"
+                onClick={handleDropAreaClick}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={`w-full p-10 mx-auto border-2 border-dashed rounded-2xl text-center bg-white transition-all cursor-pointer ${
+                  isDragging
+                    ? 'border-primary bg-primary/5 scale-[1.02]'
+                    : isUploading
+                    ? 'border-gray-200 cursor-not-allowed opacity-50'
+                    : 'border-gray-200 hover:border-gray-400 hover:bg-gray-50'
+                }`}
               >
                 <div className="text-gray-500 mb-4">
                   <img
@@ -192,32 +243,50 @@ export default function DocumentUpload() {
                   />
                 </div>
                 <h2 className="font-semibold text-lg text-gray-800 mb-2">
-                  Drop files here or click to browse
+                  {isDragging ? 'Drop files here' : 'Drop files here or click to browse'}
                 </h2>
                 <p className="text-sm font-medium text-gray-400 mb-6">
                   Supports PDF, Word, PowerPoint, and Excel files up to 20MB
                 </p>
 
-                <label htmlFor="file-input" className="btn btn-primary !inline-flex gap-1">
+                <button
+                  type="button"
+                  className="btn btn-primary !inline-flex gap-1"
+                  disabled={isUploading}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDropAreaClick();
+                  }}
+                >
                   <img src="images/icons/doc-2.svg" alt="" /> Browse Files
-                </label>
+                </button>
                 <input
+                  ref={fileInputRef}
                   id="file-input"
                   type="file"
                   className="hidden"
                   multiple
                   onChange={handleFileChange}
                   disabled={isUploading}
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,image/*"
                 />
 
                 <ul id="file-list" className="mt-6 text-sm text-gray-700 space-y-2">
                   {files.map((file, idx) => (
-                    <li key={idx} className="flex items-center justify-between px-4 py-2 bg-gray-50 rounded-lg">
+                    <li 
+                      key={idx} 
+                      className="flex items-center justify-between px-4 py-2 bg-gray-50 rounded-lg"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <span>{file.name} ({formatFileSize(file.size)})</span>
                       <button
-                        onClick={() => removeFile(idx)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeFile(idx);
+                        }}
                         className="text-red-500 hover:text-red-700"
                         disabled={isUploading}
+                        type="button"
                       >
                         ✕
                       </button>
@@ -281,15 +350,6 @@ export default function DocumentUpload() {
                   How your documents are processed
                 </p>
               </div>
-              <a
-                href="#"
-                className="btn btn-transparent !flex gap-1 justify-center items-center size-8 !p-0"
-              >
-                <img
-                  src="images/icons/three-dots-vertical.svg"
-                  alt=""
-                />
-              </a>
             </div>
 
             <div className="relative">

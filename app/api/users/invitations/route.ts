@@ -23,10 +23,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get('status');
+
+    // Build where clause
+    const where: any = {
+      tenantId: tenant.id,
+    };
+
+    if (status && ['PENDING', 'ACCEPTED', 'EXPIRED', 'REVOKED'].includes(status)) {
+      where.status = status;
+    }
+
     const invitations = await prisma.userInvitation.findMany({
-      where: {
-        tenantId: tenant.id,
-      },
+      where,
       include: {
         user: {
           select: {

@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { email, role = 'MEMBER' } = body;
+    const { email, role = 'EDITOR' } = body;
 
     if (!email) {
       return NextResponse.json(
@@ -103,26 +103,33 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate role
-    if (!['ADMIN', 'MEMBER', 'VIEWER'].includes(role)) {
+    if (!['ADMIN', 'EDITOR', 'VIEWER'].includes(role)) {
       return NextResponse.json(
         { error: 'Invalid role' },
         { status: 400 }
       );
     }
 
-    // Check if user already exists
+    // Check if user already belongs to this tenant
     const existingUser = await prisma.user.findUnique({
       where: { email },
+      include: {
+        tenants: {
+          where: {
+            tenantId: tenant.id,
+          },
+        },
+      },
     });
 
-    if (existingUser) {
+    if (existingUser && existingUser.tenants.length > 0) {
       return NextResponse.json(
-        { error: 'User already exists' },
+        { error: 'User is already a member of this organization' },
         { status: 400 }
       );
     }
 
-    // Check if there's already a pending invitation
+    // Check if there's already a pending invitation for this email and tenant
     const existingInvitation = await prisma.userInvitation.findFirst({
       where: {
         email,
@@ -133,7 +140,7 @@ export async function POST(request: NextRequest) {
 
     if (existingInvitation) {
       return NextResponse.json(
-        { error: 'Invitation already sent to this email' },
+        { error: 'Invitation already sent to this email for this organization' },
         { status: 400 }
       );
     }

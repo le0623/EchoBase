@@ -44,7 +44,7 @@ model TenantMember {
   id               String   @id @default(cuid())
   userId           String   @map("user_id")
   tenantId         String   @map("tenant_id")
-  role             UserRole @default(MEMBER)
+  role             UserRole @default(EDITOR)
   isOwner          Boolean  @default(false) @map("is_owner")
   joinedAt         DateTime @default(now()) @map("joined_at")
   createdAt        DateTime @default(now()) @map("created_at")
@@ -77,7 +77,7 @@ model Tenant {
 model UserInvitation {
   id                String   @id @default(cuid())
   email             String
-  role              UserRole @default(MEMBER)
+  role              UserRole @default(EDITOR)
   status            InvitationStatus @default(PENDING)
   token             String   @unique
   invitedBy         String   @map("invited_by") // User ID who sent the invitation
@@ -103,7 +103,7 @@ enum UserStatus {
 
 enum UserRole {
   ADMIN
-  MEMBER
+  EDITOR
   VIEWER
 }
 
