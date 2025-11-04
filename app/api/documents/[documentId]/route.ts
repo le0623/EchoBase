@@ -10,7 +10,7 @@ export async function GET(
 ) {
   try {
     const { documentId } = await params;
-    const { user, tenant } = await requireTenant();
+    const { user, tenant } = await requireTenant(request);
 
     const document = await prisma.document.findFirst({
       where: {
@@ -89,7 +89,7 @@ export async function PUT(
 ) {
   try {
     const { documentId } = await params;
-    const { user, tenant } = await requireTenant();
+    const { user, tenant } = await requireTenant(request);
 
     const body = await request.json();
     const { name, description, tags } = body;
@@ -202,7 +202,7 @@ export async function DELETE(
 ) {
   try {
     const { documentId } = await params;
-    const { user, tenant } = await requireTenant();
+    const { user, tenant } = await requireTenant(request);
 
     // Check if user has permission to delete document
     const document = await prisma.document.findFirst({

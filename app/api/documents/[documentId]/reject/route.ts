@@ -9,7 +9,7 @@ export async function POST(
 ) {
   try {
     const { documentId } = await params;
-    const { user, tenant } = await requireTenant();
+    const { user, tenant } = await requireTenant(request);
 
     // Get user's role in this tenant
     const userMembership = await prisma.tenantMember.findFirst({

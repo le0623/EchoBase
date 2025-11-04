@@ -2,6 +2,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from './auth-config';
 import { prisma } from './prisma';
 import { redirect } from 'next/navigation';
+import { extractSubdomain } from './subdomain';
+import { NextRequest } from 'next/server';
 
 export interface CurrentUser {
   id: string;
@@ -104,8 +106,9 @@ export async function requireAuth(): Promise<CurrentUser> {
   return user;
 }
 
-export async function requireTenant(subdomain?: string): Promise<{ user: CurrentUser; tenant: CurrentTenant }> {
+export async function requireTenant(request?: NextRequest): Promise<{ user: CurrentUser; tenant: CurrentTenant }> {
   const user = await requireAuth();
+  const subdomain = extractSubdomain(request);
   const tenant = await getCurrentTenant(subdomain);
   if (!tenant) {
     redirect('/signin');

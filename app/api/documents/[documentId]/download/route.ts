@@ -10,7 +10,7 @@ export async function GET(
 ) {
   try {
     const { documentId } = await params;
-    const { user, tenant } = await requireTenant();
+    const { user, tenant } = await requireTenant(request);
 
     // Get document
     const document = await prisma.document.findFirst({

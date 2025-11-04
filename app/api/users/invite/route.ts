@@ -7,7 +7,7 @@ import { protocol, rootDomain } from '@/lib/utils';
 // POST /api/users/invite - Send invitation email
 export async function POST(request: NextRequest) {
   try {
-    const { user, tenant } = await requireTenant();
+    const { user, tenant } = await requireTenant(request);
 
     // Get user's role in this tenant
     const userMembership = await prisma.tenantMember.findFirst({

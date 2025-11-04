@@ -5,7 +5,7 @@ import { uploadToS3, validateFileType, getFileSizeLimit } from '@/lib/s3';
 
 export async function POST(request: NextRequest) {
   try {
-    const { user, tenant } = await requireTenant();
+    const { user, tenant } = await requireTenant(request);
 
     // Get user's role in this tenant
     const userMembership = await prisma.tenantMember.findFirst({

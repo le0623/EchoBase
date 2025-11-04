@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 // GET /api/users/invitations - Get all invitations for the tenant
 export async function GET(request: NextRequest) {
   try {
-    const { user, tenant } = await requireTenant();
+    const { user, tenant } = await requireTenant(request);
 
     // Get user's role in this tenant
     const userMembership = await prisma.tenantMember.findFirst({

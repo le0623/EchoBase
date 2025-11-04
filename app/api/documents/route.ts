@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 // GET /api/documents - Get all documents for the tenant
 export async function GET(request: NextRequest) {
   try {
-    const { user, tenant } = await requireTenant();
+    const { user, tenant } = await requireTenant(request);
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');

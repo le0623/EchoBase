@@ -1,13 +1,109 @@
 "use client";
 
-import { useState, ChangeEvent } from "react";
+import { useState, ChangeEvent, useCallback } from "react";
+import { formatFileSize } from "@/lib/s3";
+
+interface ProcessingStep {
+  name: string;
+  status: 'pending' | 'processing' | 'completed';
+}
 
 export default function DocumentUpload() {
   const [files, setFiles] = useState<File[]>([]);
+  const [documentName, setDocumentName] = useState("");
+  const [description, setDescription] = useState("");
+  const [tags, setTags] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState("");
+  const [processingSteps, setProcessingSteps] = useState<ProcessingStep[]>([]);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const newFiles = Array.from(e.target.files || []);
     setFiles((prev) => [...prev, ...newFiles]);
+  };
+
+  const removeFile = (index: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const updateProcessingStep = useCallback((stepName: string, status: 'processing' | 'completed') => {
+    setProcessingSteps((prev) =>
+      prev.map((step) => step.name === stepName ? { ...step, status } : step)
+    );
+  }, []);
+
+  const handleUpload = async () => {
+    if (files.length === 0) {
+      setError('Please select at least one file');
+      return;
+    }
+
+    if (!documentName.trim()) {
+      setError('Please enter a document name');
+      return;
+    }
+
+    setIsUploading(true);
+    setError("");
+    setProcessingSteps([
+      { name: 'Text extraction from file', status: 'pending' },
+      { name: 'Content summarization', status: 'pending' },
+      { name: 'Vector embedding generation', status: 'pending' },
+      { name: 'Search index update', status: 'pending' },
+    ]);
+
+    try {
+      // Upload each file
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('name', documentName);
+        formData.append('description', description);
+        formData.append('tags', tags);
+
+        // Start upload
+        const response = await fetch('/api/documents/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Upload failed');
+        }
+
+        const result = await response.json();
+
+        // Simulate processing steps with animation
+        const steps = [
+          'Text extraction from file',
+          'Content summarization',
+          'Vector embedding generation',
+          'Search index update',
+        ];
+
+        for (const stepName of steps) {
+          await new Promise(resolve => setTimeout(resolve, 800));
+          updateProcessingStep(stepName, 'processing');
+          await new Promise(resolve => setTimeout(resolve, 1200));
+          updateProcessingStep(stepName, 'completed');
+        }
+      }
+
+      // Success - clear form
+      setFiles([]);
+      setDocumentName("");
+      setDescription("");
+      setTags("");
+      setProcessingSteps([]);
+      
+      alert('Documents uploaded successfully!');
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload documents');
+    } finally {
+      setIsUploading(false);
+      setProcessingSteps([]);
+    }
   };
 
   return (
@@ -35,6 +131,51 @@ export default function DocumentUpload() {
                   alt=""
                 />
               </a>
+            </div>
+
+            {/* Document Name Input */}
+            <div>
+              <label className="block text-base font-medium text-gray-700 mb-2">
+                Document Name *
+              </label>
+              <input
+                type="text"
+                value={documentName}
+                onChange={(e) => setDocumentName(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="Enter document name"
+                disabled={isUploading}
+              />
+            </div>
+
+            {/* Description Input */}
+            <div>
+              <label className="block text-base font-medium text-gray-700 mb-2">
+                Description
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="Enter document description"
+                rows={3}
+                disabled={isUploading}
+              />
+            </div>
+
+            {/* Tags Input */}
+            <div>
+              <label className="block text-base font-medium text-gray-700 mb-2">
+                Tags (comma-separated)
+              </label>
+              <input
+                type="text"
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="tag1, tag2, tag3"
+                disabled={isUploading}
+              />
             </div>
 
             {/* Drop Area */}
@@ -66,14 +207,38 @@ export default function DocumentUpload() {
                   className="hidden"
                   multiple
                   onChange={handleFileChange}
+                  disabled={isUploading}
                 />
 
-                <ul id="file-list" className="mt-6 text-sm text-gray-700 space-y-1">
+                <ul id="file-list" className="mt-6 text-sm text-gray-700 space-y-2">
                   {files.map((file, idx) => (
-                    <li key={idx}>{file.name}</li>
+                    <li key={idx} className="flex items-center justify-between px-4 py-2 bg-gray-50 rounded-lg">
+                      <span>{file.name} ({formatFileSize(file.size)})</span>
+                      <button
+                        onClick={() => removeFile(idx)}
+                        className="text-red-500 hover:text-red-700"
+                        disabled={isUploading}
+                      >
+                        ✕
+                      </button>
+                    </li>
                   ))}
                 </ul>
               </div>
+
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                  {error}
+                </div>
+              )}
+
+              <button
+                onClick={handleUpload}
+                disabled={isUploading || files.length === 0 || !documentName.trim()}
+                className="w-full bg-primary text-white py-4 rounded-lg font-semibold text-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isUploading ? 'Uploading...' : 'Upload Documents'}
+              </button>
 
               {/* Upload Guidelines */}
               <div className="space-y-3">
@@ -144,21 +309,42 @@ export default function DocumentUpload() {
 
             <div className="space-y-3">
               <ul className="flex flex-wrap gap-y-4 -mx-2 [&>*]:w-full [&>*]:px-2 [&>*]:flex [&>*]:items-start [&>*]:gap-2">
-                {[
-                  "Text extraction from file",
-                  "Content summarization",
-                  "Vector embedding generation",
-                  "Search index update",
-                ].map((item, idx) => (
-                  <li key={idx}>
-                    <img
-                      src="images/icons/check.svg"
-                      alt="check"
-                      className="mt-1 icon-theme-green-500"
-                    />
-                    {item}
-                  </li>
-                ))}
+                {processingSteps.length > 0 ? (
+                  processingSteps.map((step, idx) => (
+                    <li key={idx}>
+                      {step.status === 'completed' ? (
+                        <img
+                          src="images/icons/check.svg"
+                          alt="check"
+                          className="mt-1 icon-theme-green-500"
+                        />
+                      ) : step.status === 'processing' ? (
+                        <div className="mt-1 w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                      ) : (
+                        <div className="mt-1 w-4 h-4 border-2 border-gray-300 rounded-full"></div>
+                      )}
+                      <span className={step.status === 'completed' ? 'text-green-600' : step.status === 'processing' ? 'text-blue-600 font-semibold' : 'text-gray-500'}>
+                        {step.name}
+                      </span>
+                    </li>
+                  ))
+                ) : (
+                  [
+                    "Text extraction from file",
+                    "Content summarization",
+                    "Vector embedding generation",
+                    "Search index update",
+                  ].map((item, idx) => (
+                    <li key={idx}>
+                      <img
+                        src="images/icons/check.svg"
+                        alt="check"
+                        className="mt-1 icon-theme-green-500"
+                      />
+                      {item}
+                    </li>
+                  ))
+                )}
               </ul>
             </div>
           </div>

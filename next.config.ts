@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
       },
     ],
     formats: ['image/webp', 'image/avif'],
+    qualities: [25, 50, 75, 100],
   },
   // Enable static file serving
   trailingSlash: false,

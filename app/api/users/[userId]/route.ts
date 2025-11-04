@@ -9,7 +9,7 @@ export async function GET(
 ) {
   try {
     const { userId } = await params;
-    const { user, tenant } = await requireTenant();
+    const { user, tenant } = await requireTenant(request);
 
     // Get user's role in this tenant
     const userMembership = await prisma.tenantMember.findFirst({
@@ -87,7 +87,7 @@ export async function PUT(
 ) {
   try {
     const { userId } = await params;
-    const { user, tenant } = await requireTenant();
+    const { user, tenant } = await requireTenant(request);
 
     // Get user's role in this tenant
     const userMembership = await prisma.tenantMember.findFirst({
@@ -222,7 +222,7 @@ export async function DELETE(
 ) {
   try {
     const { userId } = await params;
-    const { user, tenant } = await requireTenant();
+    const { user, tenant } = await requireTenant(request);
 
     // Get user's role in this tenant
     const userMembership = await prisma.tenantMember.findFirst({
