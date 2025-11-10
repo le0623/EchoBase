@@ -61,12 +61,13 @@ model TenantMember {
 }
 
 model Tenant {
-  id        String   @id @default(cuid())
-  name      String
-  subdomain String?  @unique // Subdomain for tenant-specific routing
-  logoUrl   String?  @map("logo_url")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id          String   @id @default(cuid())
+  name        String
+  subdomain   String?  @unique // Subdomain for tenant-specific routing
+  logoUrl     String?  @map("logo_url")
+  assistantId String?  @map("assistant_id") // OpenAI Assistant ID for knowledge base
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   // Relationships
   members       TenantMember[]
@@ -144,8 +145,24 @@ model Document {
   updatedAt       DateTime       @updatedAt @map("updated_at")
   approvedAt      DateTime?      @map("approved_at")
   rejectedAt      DateTime?      @map("rejected_at")
+  chunks          DocumentChunk[] // RAG chunks with embeddings
 
   @@map("documents")
+}
+
+// Document chunks for RAG (Retrieval-Augmented Generation)
+model DocumentChunk {
+  id         String   @id @default(cuid())
+  documentId String   @map("document_id")
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  content    String   // Text content of the chunk
+  chunkIndex Int      @map("chunk_index") // Order of chunk in document
+  embedding  Float[]  // Vector embedding (1536 dimensions for text-embedding-3-small)
+  metadata   String?  // JSON metadata (e.g., page number, section)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([documentId])
+  @@map("document_chunks")
 }
 
 enum DocumentStatus {
@@ -160,6 +177,7 @@ model Conversation {
   title     String // First message or auto-generated title
   userId    String    @map("user_id")
   tenantId  String    @map("tenant_id")
+  threadId String?   @map("thread_id") // OpenAI Thread ID for Assistant API
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   messages  Message[]

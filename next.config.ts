@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  turbopack: {
+    resolveAlias: {
+      canvas: 'canvas-browser',
+    },
+  },
   images: {
     remotePatterns: [
       {
@@ -15,6 +20,9 @@ const nextConfig: NextConfig = {
   trailingSlash: false,
   // Optimize for Vercel
   output: 'standalone',
+  experimental: {
+    serverComponentsExternalPackages: ['pdf-parse'],
+  },
 };
 
 export default nextConfig;

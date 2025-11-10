@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireTenant } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { processAndEmbedDocument } from '@/lib/rag/embeddings';
+import { loadFileText, loadPDFText } from '@/lib/utils/fileLoader';
 
 // POST /api/documents/[documentId]/approve - Approve a document
 export async function POST(
@@ -49,7 +51,32 @@ export async function POST(
       );
     }
 
-    // Approve document
+    // Process and embed document for RAG FIRST (before approval)
+    try {
+      // Load document text
+      let text: string;
+      if (document.mimeType === 'application/pdf') {
+        text = await loadPDFText(document.fileUrl);
+      } else {
+        text = await loadFileText(document.fileUrl, document.mimeType);
+      }
+
+      // Process and embed the document
+      await processAndEmbedDocument(documentId, text);
+      console.log(`✅ Document ${documentId} processed and embedded successfully`);
+    } catch (error) {
+      console.error('Error processing document for RAG:', error);
+      // If embedding fails, don't approve the document
+      return NextResponse.json(
+        { 
+          error: 'Failed to process and embed document. Document was not approved.',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        },
+        { status: 500 }
+      );
+    }
+
+    // Only approve document if processing and embedding succeeded
     const approvedDocument = await prisma.document.update({
       where: { id: documentId },
       data: {
