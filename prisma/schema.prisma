@@ -11,84 +11,88 @@ datasource db {
 }
 
 model User {
-  id               String   @id @default(cuid())
-  email            String   @unique
-  password         String?  // For email/password authentication
-  name             String?  // Full name
-  profileImageUrl  String?  @map("profile_image_url")
-  emailVerified    DateTime? @map("email_verified")
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
-  lastActive       DateTime @default(now()) @map("last_active")
-  
+  id              String    @id @default(cuid())
+  email           String    @unique
+  password        String? // For email/password authentication
+  name            String? // Full name
+  profileImageUrl String?   @map("profile_image_url")
+  emailVerified   DateTime? @map("email_verified")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  lastActive      DateTime  @default(now()) @map("last_active")
+
   // User status
-  status           UserStatus @default(ACTIVE)
-  
+  status UserStatus @default(ACTIVE)
+
   // Multi-tenant relationship - users can belong to multiple tenants
-  tenants          TenantMember[]
-  
+  tenants TenantMember[]
+
   // Invitation relationship
-  invitationId     String?  @unique @map("invitation_id")
-  invitation       UserInvitation? @relation(fields: [invitationId], references: [id])
-  
+  invitationId String?         @unique @map("invitation_id")
+  invitation   UserInvitation? @relation(fields: [invitationId], references: [id])
+
   // Document relationships
   submittedDocuments Document[] @relation("DocumentSubmitter")
   approvedDocuments  Document[] @relation("DocumentApprover")
   rejectedDocuments  Document[] @relation("DocumentRejector")
+
+  // Conversation relationships
+  conversations Conversation[]
 
   @@map("users")
 }
 
 // Tenant Member - User-Tenant relationship with role
 model TenantMember {
-  id               String   @id @default(cuid())
-  userId           String   @map("user_id")
-  tenantId         String   @map("tenant_id")
-  role             UserRole @default(EDITOR)
-  isOwner          Boolean  @default(false) @map("is_owner")
-  joinedAt         DateTime @default(now()) @map("joined_at")
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
-  
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  tenantId  String   @map("tenant_id")
+  role      UserRole @default(EDITOR)
+  isOwner   Boolean  @default(false) @map("is_owner")
+  joinedAt  DateTime @default(now()) @map("joined_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   @@unique([userId, tenantId])
   @@map("tenant_members")
 }
 
 model Tenant {
-  id                String   @id @default(cuid())
-  name              String
-  subdomain         String?  @unique // Subdomain for tenant-specific routing
-  logoUrl           String?  @map("logo_url")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  id        String   @id @default(cuid())
+  name      String
+  subdomain String?  @unique // Subdomain for tenant-specific routing
+  logoUrl   String?  @map("logo_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relationships
-  members           TenantMember[]
-  invitations       UserInvitation[]
-  documents         Document[]
+  members       TenantMember[]
+  invitations   UserInvitation[]
+  documents     Document[]
+  conversations Conversation[]
 
   @@map("tenants")
 }
 
 // User invitation model
 model UserInvitation {
-  id                String   @id @default(cuid())
-  email             String
-  role              UserRole @default(EDITOR)
-  status            InvitationStatus @default(PENDING)
-  token             String   @unique
-  invitedBy         String   @map("invited_by") // User ID who sent the invitation
-  tenantId          String   @map("tenant_id")
-  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
-  expiresAt         DateTime @map("expires_at")
-  
+  id        String           @id @default(cuid())
+  email     String
+  role      UserRole         @default(EDITOR)
+  status    InvitationStatus @default(PENDING)
+  token     String           @unique
+  invitedBy String           @map("invited_by") // User ID who sent the invitation
+  tenantId  String           @map("tenant_id")
+  tenant    Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt DateTime         @default(now()) @map("created_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
+  expiresAt DateTime         @map("expires_at")
+
   // Relationship to user when they accept the invitation
-  user              User?
+  user User?
 
   @@unique([email, tenantId])
   @@map("user_invitations")
@@ -116,30 +120,30 @@ enum InvitationStatus {
 
 // Document management models
 model Document {
-  id                String   @id @default(cuid())
-  name              String
-  originalName      String   @map("original_name")
-  description       String?
-  tags              String[] // Array of tags
-  fileUrl           String   @map("file_url") // S3 URL
-  fileKey           String   @unique @map("file_key") // S3 object key
-  fileSize          Int      @map("file_size") // File size in bytes
-  mimeType          String   @map("mime_type")
-  version           Int      @default(1)
-  status            DocumentStatus @default(PENDING)
-  submittedBy       String   @map("submitted_by") // User ID
-  approvedBy        String?  @map("approved_by") // User ID
-  rejectedBy        String?  @map("rejected_by") // User ID
-  rejectionReason   String?  @map("rejection_reason")
-  tenantId          String   @map("tenant_id")
-  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  submittedByUser   User     @relation("DocumentSubmitter", fields: [submittedBy], references: [id])
-  approvedByUser    User?    @relation("DocumentApprover", fields: [approvedBy], references: [id])
-  rejectedByUser    User?    @relation("DocumentRejector", fields: [rejectedBy], references: [id])
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
-  approvedAt        DateTime? @map("approved_at")
-  rejectedAt        DateTime? @map("rejected_at")
+  id              String         @id @default(cuid())
+  name            String
+  originalName    String         @map("original_name")
+  description     String?
+  tags            String[] // Array of tags
+  fileUrl         String         @map("file_url") // S3 URL
+  fileKey         String         @unique @map("file_key") // S3 object key
+  fileSize        Int            @map("file_size") // File size in bytes
+  mimeType        String         @map("mime_type")
+  version         Int            @default(1)
+  status          DocumentStatus @default(PENDING)
+  submittedBy     String         @map("submitted_by") // User ID
+  approvedBy      String?        @map("approved_by") // User ID
+  rejectedBy      String?        @map("rejected_by") // User ID
+  rejectionReason String?        @map("rejection_reason")
+  tenantId        String         @map("tenant_id")
+  tenant          Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  submittedByUser User           @relation("DocumentSubmitter", fields: [submittedBy], references: [id])
+  approvedByUser  User?          @relation("DocumentApprover", fields: [approvedBy], references: [id])
+  rejectedByUser  User?          @relation("DocumentRejector", fields: [rejectedBy], references: [id])
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+  approvedAt      DateTime?      @map("approved_at")
+  rejectedAt      DateTime?      @map("rejected_at")
 
   @@map("documents")
 }
@@ -150,3 +154,35 @@ enum DocumentStatus {
   REJECTED
 }
 
+// Conversation and Message models for chat functionality
+model Conversation {
+  id        String    @id @default(cuid())
+  title     String // First message or auto-generated title
+  userId    String    @map("user_id")
+  tenantId  String    @map("tenant_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  messages  Message[]
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@index([userId, tenantId])
+  @@map("conversations")
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String       @map("conversation_id")
+  role           MessageRole // USER or ASSISTANT
+  content        String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@index([conversationId])
+  @@map("messages")
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+}
