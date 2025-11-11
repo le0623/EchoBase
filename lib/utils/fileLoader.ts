@@ -1,7 +1,9 @@
 /**
  * File loading utilities for document processing
  */
-import { PDFParse } from 'pdf-parse';
+import https from "https";
+import http from "http";
+import { URL } from "url";
 
 /**
  * Extract text content from a file URL
@@ -19,15 +21,9 @@ export async function loadFileText(fileUrl: string, mimeType: string): Promise<s
       return await response.text();
     }
 
-    // For PDF files, we'll need to parse them
-    // For now, we'll use a simple approach - in production, use pdf-parse
+    // For PDF files, use loadPDFText
     if (mimeType === 'application/pdf') {
-      // Note: This is a simplified version. For production, install pdf-parse:
-      // npm install pdf-parse
-      // import pdf from 'pdf-parse';
-      const arrayBuffer = await response.arrayBuffer();
-      // For now, return a placeholder - you should use pdf-parse here
-      throw new Error('PDF parsing requires pdf-parse package. Please install: npm install pdf-parse');
+      return await loadPDFText(fileUrl);
     }
 
     // For other file types, try to extract text
@@ -42,18 +38,80 @@ export async function loadFileText(fileUrl: string, mimeType: string): Promise<s
 }
 
 /**
- * Load PDF text using pdf-parse (if available)
+ * Load PDF text using pdf2json
+ * pdf2json is serverless-friendly and doesn't require browser APIs
  */
 export async function loadPDFText(fileUrl: string): Promise<string> {
-  try {
-    // Dynamic import to avoid requiring pdf-parse if not installed
-    const parser = new PDFParse({ url: fileUrl });
-    const result = await parser.getText();
-    await parser.destroy();
+  // Parse the URL to determine protocol and get hostname/path
+  const url = new URL(fileUrl);
+  const isHttps = url.protocol === 'https:';
+  const httpModule = isHttps ? https : http;
 
-    return result.text;
-  } catch (error) {
-    console.error('Error loading PDF:', error);
-    throw error;
-  }
+  // Dynamically import pdf2json
+  const pdf2jsonModule = await import('pdf2json');
+  const PDFParser = pdf2jsonModule.default || pdf2jsonModule;
+
+  return new Promise<string>((resolve, reject) => {
+    try {
+      // Create a new PDFParser instance for this request
+      const pdfParser = new (PDFParser as any)(null, true);
+
+      // Set up error handler
+      pdfParser.on("pdfParser_dataError", (errData: any) => {
+        const errorMsg = errData?.parserError || errData?.message || 'Unknown PDF parsing error';
+        reject(new Error(`PDF parsing error: ${errorMsg}`));
+      });
+
+      // Set up success handler
+      pdfParser.on("pdfParser_dataReady", () => {
+        try {
+          const parsedText = pdfParser.getRawTextContent() || "";
+          if (parsedText === "") {
+            reject(new Error("Failed to parse PDF: No text content extracted"));
+          } else {
+            resolve(parsedText);
+          }
+        } catch (error) {
+          reject(new Error(`Error extracting text from PDF: ${error instanceof Error ? error.message : 'Unknown error'}`));
+        }
+      });
+
+      // Create the HTTP/HTTPS request options
+      const options = {
+        hostname: url.hostname,
+        port: url.port || (isHttps ? 443 : 80),
+        path: url.pathname + url.search,
+        method: 'GET',
+        headers: {
+          'User-Agent': 'EchoBase-PDF-Parser',
+        },
+      };
+
+      // Make the request and pipe the response to the PDF parser
+      const req = httpModule.request(options, (res) => {
+        // Check if response is successful
+        if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          // Handle redirects
+          return loadPDFText(res.headers.location).then(resolve).catch(reject);
+        }
+
+        if (res.statusCode && (res.statusCode < 200 || res.statusCode >= 300)) {
+          return reject(new Error(`Failed to fetch PDF: HTTP ${res.statusCode}`));
+        }
+
+        // Pipe the response stream to the PDF parser
+        res.pipe(pdfParser.createParserStream());
+      });
+
+      // Handle request errors
+      req.on('error', (error) => {
+        reject(new Error(`Failed to fetch PDF: ${error.message}`));
+      });
+
+      // End the request
+      req.end();
+    } catch (error) {
+      reject(new Error(`Error loading PDF: ${error instanceof Error ? error.message : 'Unknown error'}`));
+    }
+  });
 }

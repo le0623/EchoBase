@@ -20,7 +20,6 @@ const nextConfig: NextConfig = {
   trailingSlash: false,
   // Optimize for Vercel
   output: 'standalone',
-  serverExternalPackages: ['pdf-parse'],
 };
 
 export default nextConfig;
