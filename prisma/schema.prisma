@@ -74,6 +74,7 @@ model Tenant {
   invitations   UserInvitation[]
   documents     Document[]
   conversations Conversation[]
+  apiKeys       ApiKey[]
 
   @@map("tenants")
 }
@@ -203,4 +204,42 @@ model Message {
 enum MessageRole {
   USER
   ASSISTANT
+}
+
+// API Key management models
+model ApiKey {
+  id            String    @id @default(cuid())
+  tenantId      String    @map("tenant_id")
+  name          String    // User-friendly name for the API key
+  keyHash       String    @unique @map("key_hash") // Hashed API key (never store plain text)
+  prefix        String    // First 8 characters of the key for display (e.g., "eb_1234...")
+  expirationDate DateTime? @map("expiration_date") // null means never expires
+  isEnabled     Boolean   @default(true) @map("is_enabled")
+  dailyLimit    Float     @default(0) @map("daily_limit") // Daily usage limit in $
+  monthlyLimit  Float     @default(0) @map("monthly_limit") // Monthly usage limit in $
+  lastUsedAt    DateTime? @map("last_used_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  usage         ApiKeyUsage[]
+
+  @@index([tenantId])
+  @@index([keyHash])
+  @@map("api_keys")
+}
+
+model ApiKeyUsage {
+  id            String   @id @default(cuid())
+  apiKeyId      String   @map("api_key_id")
+  date          DateTime @db.Date // Date for daily/monthly tracking
+  cost          Float    @default(0) // Cost in $ for this usage
+  requestCount  Int      @default(0) @map("request_count")
+  createdAt     DateTime @default(now()) @map("created_at")
+  
+  apiKey        ApiKey   @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+
+  @@unique([apiKeyId, date])
+  @@index([apiKeyId, date])
+  @@map("api_key_usage")
 }
