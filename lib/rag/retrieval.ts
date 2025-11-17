@@ -1,5 +1,6 @@
 import { prisma } from '../prisma';
 import { generateEmbedding } from './embeddings';
+import { getUserTagIds } from '../tags';
 
 /**
  * Calculate cosine similarity between two vectors
@@ -25,23 +26,61 @@ function cosineSimilarity(a: number[], b: number[]): number {
 
 /**
  * Retrieve relevant document chunks for a query using vector similarity
+ * Filters chunks based on user's access tags
  */
 export async function retrieveRelevantChunks(
   query: string,
   tenantId: string,
-  topK: number = 5
+  topK: number = 5,
+  userId?: string // Optional: if provided, filter by user tags
 ): Promise<Array<{ content: string; documentId: string; documentName: string; chunkIndex: number; similarity: number }>> {
   try {
     // Generate embedding for the query
     const queryEmbedding = await generateEmbedding(query);
 
-    // Get all document chunks for approved documents in this tenant
+    // Build document filter with access control
+    const documentWhere: any = {
+      tenantId,
+      status: 'APPROVED',
+    };
+
+    // If userId is provided, filter by user tags (unless user is admin)
+    if (userId) {
+      // Check if user is admin first
+      const userMembership = await prisma.tenantMember.findFirst({
+        where: {
+          userId,
+          tenantId,
+        },
+        select: {
+          role: true,
+          isOwner: true,
+        },
+      });
+
+      // Admins can access all documents - don't add tag filter
+      if (!userMembership || (userMembership.role !== 'ADMIN' && !userMembership.isOwner)) {
+        const userTagIds = await getUserTagIds(userId, tenantId);
+
+        if (userTagIds.length === 0) {
+          // User has no tags, can only access documents with no access tags
+          documentWhere.accessTags = { none: {} };
+        } else {
+          // User can access documents that:
+          // 1. Have no access tags (accessible to all)
+          // 2. Have at least one tag matching user's tags
+          documentWhere.OR = [
+            { accessTags: { none: {} } },
+            { accessTags: { some: { id: { in: userTagIds } } } },
+          ];
+        }
+      }
+    }
+
+    // Get all document chunks for approved documents in this tenant (with access control)
     const chunks = await prisma.documentChunk.findMany({
       where: {
-        document: {
-          tenantId,
-          status: 'APPROVED',
-        },
+        document: documentWhere,
       },
       include: {
         document: {

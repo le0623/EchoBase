@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   ArrowUp,
   ArrowDown,
@@ -41,15 +42,46 @@ interface Stats {
 }
 
 export default function DocumentApproval() {
+  const router = useRouter();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [stats, setStats] = useState<Stats>({ pending: 0, reviewing: 0, approved: 0, rejected: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
+  const [isCheckingPermission, setIsCheckingPermission] = useState(true);
+
+  // Check admin permission on mount
+  useEffect(() => {
+    const checkPermission = async () => {
+      try {
+        const response = await fetch('/api/user/membership');
+        if (response.ok) {
+          const data = await response.json();
+          if (!data.isAdmin) {
+            router.push('/dashboard');
+            return;
+          }
+        } else {
+          router.push('/dashboard');
+          return;
+        }
+      } catch (error) {
+        console.error('Failed to check permission:', error);
+        router.push('/dashboard');
+        return;
+      } finally {
+        setIsCheckingPermission(false);
+      }
+    };
+
+    checkPermission();
+  }, [router]);
 
   useEffect(() => {
-    fetchDocuments();
-  }, []);
+    if (!isCheckingPermission) {
+      fetchDocuments();
+    }
+  }, [isCheckingPermission]);
 
   const fetchDocuments = async () => {
     try {
@@ -122,6 +154,14 @@ export default function DocumentApproval() {
       setIsProcessing(null);
     }
   };
+
+  if (isCheckingPermission) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="w-8 h-8 border-4 border-gray-200 border-t-primary rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);

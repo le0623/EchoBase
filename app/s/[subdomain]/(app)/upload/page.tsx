@@ -1,24 +1,92 @@
 "use client";
 
-import { useState, ChangeEvent, useCallback, useRef } from "react";
+import { useState, ChangeEvent, useCallback, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { formatFileSize } from "@/lib/s3";
-import { TagsInput } from "@/components/extension/tags-input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 interface ProcessingStep {
   name: string;
   status: 'pending' | 'processing' | 'completed';
 }
 
+interface Tag {
+  id: string;
+  name: string;
+}
+
 export default function DocumentUpload() {
+  const router = useRouter();
   const [files, setFiles] = useState<File[]>([]);
   const [documentName, setDocumentName] = useState("");
   const [description, setDescription] = useState("");
-  const [tags, setTags] = useState<string[]>([]);
+  const [selectedAccessTagIds, setSelectedAccessTagIds] = useState<string[]>([]); // Access control tags
+  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
+  const [isLoadingTags, setIsLoadingTags] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState("");
   const [processingSteps, setProcessingSteps] = useState<ProcessingStep[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [isCheckingPermission, setIsCheckingPermission] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Check admin permission on mount
+  useEffect(() => {
+    const checkPermission = async () => {
+      try {
+        const response = await fetch('/api/user/membership');
+        if (response.ok) {
+          const data = await response.json();
+          if (!data.isAdmin) {
+            router.push('/dashboard');
+            return;
+          }
+        } else {
+          router.push('/dashboard');
+          return;
+        }
+      } catch (error) {
+        console.error('Failed to check permission:', error);
+        router.push('/dashboard');
+        return;
+      } finally {
+        setIsCheckingPermission(false);
+      }
+    };
+
+    checkPermission();
+  }, [router]);
+
+  // Fetch available tags on component mount
+  useEffect(() => {
+    if (!isCheckingPermission) {
+      fetchTags();
+    }
+  }, [isCheckingPermission]);
+
+  const fetchTags = async () => {
+    try {
+      setIsLoadingTags(true);
+      const response = await fetch("/api/tags");
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableTags(data.tags || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch tags:", err);
+    } finally {
+      setIsLoadingTags(false);
+    }
+  };
+
+  const toggleAccessTag = (tagId: string) => {
+    setSelectedAccessTagIds(prev => 
+      prev.includes(tagId) 
+        ? prev.filter(id => id !== tagId)
+        : [...prev, tagId]
+    );
+  };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const newFiles = Array.from(e.target.files || []);
@@ -101,8 +169,8 @@ export default function DocumentUpload() {
          formData.append('file', file);
          formData.append('name', documentName);
          formData.append('description', description);
-         // Convert tags array to comma-separated string for the API
-         formData.append('tags', tags.join(','));
+         // Convert access tag IDs to comma-separated string for the API
+         formData.append('accessTagIds', selectedAccessTagIds.join(','));
 
         // Start upload
         const response = await fetch('/api/documents/upload', {
@@ -137,7 +205,7 @@ export default function DocumentUpload() {
        setFiles([]);
        setDocumentName("");
        setDescription("");
-       setTags([]);
+       setSelectedAccessTagIds([]);
        setProcessingSteps([]);
       
       alert('Documents uploaded successfully!');
@@ -148,6 +216,14 @@ export default function DocumentUpload() {
       setProcessingSteps([]);
     }
   };
+
+  if (isCheckingPermission) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="w-8 h-8 border-4 border-gray-200 border-t-primary rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col">
@@ -206,18 +282,45 @@ export default function DocumentUpload() {
               />
             </div>
 
-                         {/* Tags Input */}
-             <div>
-               <label className="block text-base font-medium text-gray-700 mb-2">
-                 Tags
-               </label>
-               <TagsInput
-                 value={tags}
-                 onValueChange={setTags}
-                 placeholder="Enter tags and press Enter"
-                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-               />
-             </div>
+            {/* Access Tags (Custom Roles) */}
+            <div>
+              <label className="block text-base font-medium text-gray-700 mb-2">
+                Access Tags (Who can access this document)
+              </label>
+              {isLoadingTags ? (
+                <div className="p-4 border border-gray-300 rounded-lg bg-gray-50">
+                  <p className="text-sm text-gray-500">Loading tags...</p>
+                </div>
+              ) : availableTags.length === 0 ? (
+                <div className="p-4 border border-dashed border-gray-300 rounded-lg bg-gray-50">
+                  <p className="text-sm text-gray-500">
+                    No access tags available. Create tags in the Role and Permission section first.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-300 rounded-lg p-4 bg-white">
+                  {availableTags.map((tag) => (
+                    <div key={tag.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`access-tag-${tag.id}`}
+                        checked={selectedAccessTagIds.includes(tag.id)}
+                        onCheckedChange={() => toggleAccessTag(tag.id)}
+                        disabled={isUploading}
+                      />
+                      <Label
+                        htmlFor={`access-tag-${tag.id}`}
+                        className="text-sm font-normal cursor-pointer flex-1"
+                      >
+                        {tag.name}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs text-gray-500 mt-1">
+                Select one or more tags to control who can access this document. Users with matching tags will be able to view and search this document. Leave empty to make it accessible to all users.
+              </p>
+            </div>
 
             {/* Drop Area */}
             <div className="space-y-5">

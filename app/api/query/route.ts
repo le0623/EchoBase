@@ -124,14 +124,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate answer using RAG
+    // For API keys (not logged-in users), access documents with no access tags (public documents)
+    // API keys don't have user tags, so they can only access public documents
+    // Note: In the future, API keys could have tags assigned to them for more granular access control
     const answer = await generateRAGAnswer(
       query.trim(),
       tenant.id,
       history.map((msg: any) => ({
         role: msg.role === 'user' ? 'USER' : 'ASSISTANT',
         content: msg.content,
-      }))
+      })),
+      undefined // No userId for API keys - they access public documents only
     );
 
     // Estimate cost (simplified - in production, calculate based on actual token usage)

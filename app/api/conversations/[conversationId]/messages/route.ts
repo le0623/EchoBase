@@ -195,11 +195,12 @@ export async function POST(
       content: msg.content,
     }));
 
-    // Generate answer using RAG
+    // Generate answer using RAG (with user tag filtering)
     const assistantResponse = await generateRAGAnswer(
       content.trim(),
       tenant.id,
-      conversationHistory
+      conversationHistory,
+      user.id
     );
 
     // Save user message

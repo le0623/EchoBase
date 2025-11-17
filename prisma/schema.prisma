@@ -43,18 +43,21 @@ model User {
 }
 
 // Tenant Member - User-Tenant relationship with role
+// role: ADMIN is for system administration (managing users, settings, etc.)
+// tags: Custom roles/permissions for document access control
 model TenantMember {
-  id        String   @id @default(cuid())
-  userId    String   @map("user_id")
-  tenantId  String   @map("tenant_id")
-  role      UserRole @default(EDITOR)
-  isOwner   Boolean  @default(false) @map("is_owner")
-  joinedAt  DateTime @default(now()) @map("joined_at")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  tenantId  String    @map("tenant_id")
+  role      UserRole? // Optional: Only ADMIN for system admin, null for regular users
+  isOwner   Boolean   @default(false) @map("is_owner")
+  joinedAt  DateTime  @default(now()) @map("joined_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tags   Tag[]  // Access control tags assigned to this user (implicit many-to-many) - these are the custom roles
 
   @@unique([userId, tenantId])
   @@map("tenant_members")
@@ -75,6 +78,7 @@ model Tenant {
   documents     Document[]
   conversations Conversation[]
   apiKeys       ApiKey[]
+  tags           Tag[] // Access control tags/departments
 
   @@map("tenants")
 }
@@ -83,7 +87,7 @@ model Tenant {
 model UserInvitation {
   id        String           @id @default(cuid())
   email     String
-  role      UserRole         @default(EDITOR)
+  role      UserRole?        // Optional: Only ADMIN for system admin, null for regular users
   status    InvitationStatus @default(PENDING)
   token     String           @unique
   invitedBy String           @map("invited_by") // User ID who sent the invitation
@@ -92,6 +96,7 @@ model UserInvitation {
   createdAt DateTime         @default(now()) @map("created_at")
   updatedAt DateTime         @updatedAt @map("updated_at")
   expiresAt DateTime         @map("expires_at")
+  tagIds    String[]         @default([]) @map("tag_ids") // Array of tag IDs for custom roles
 
   // Relationship to user when they accept the invitation
   user User?
@@ -108,9 +113,7 @@ enum UserStatus {
 }
 
 enum UserRole {
-  ADMIN
-  EDITOR
-  VIEWER
+  ADMIN // Only ADMIN role remains - for system administration. Custom roles are handled via tags.
 }
 
 enum InvitationStatus {
@@ -126,7 +129,6 @@ model Document {
   name            String
   originalName    String         @map("original_name")
   description     String?
-  tags            String[] // Array of tags
   fileUrl         String         @map("file_url") // S3 URL
   fileKey         String         @unique @map("file_key") // S3 object key
   fileSize        Int            @map("file_size") // File size in bytes
@@ -147,6 +149,7 @@ model Document {
   approvedAt      DateTime?      @map("approved_at")
   rejectedAt      DateTime?      @map("rejected_at")
   chunks          DocumentChunk[] // RAG chunks with embeddings
+  accessTags      Tag[]          // Access control tags (who can access this document) - implicit many-to-many
 
   @@map("documents")
 }
@@ -242,4 +245,23 @@ model ApiKeyUsage {
   @@unique([apiKeyId, date])
   @@index([apiKeyId, date])
   @@map("api_key_usage")
+}
+
+// Tag model for access control (departments/access groups)
+// Single tag list table - tenant admin manages tags
+// Tags are assigned to users (TenantMember) and documents (Document) via implicit many-to-many
+model Tag {
+  id        String   @id @default(cuid())
+  tenantId  String   @map("tenant_id")
+  name      String   // Tag name (e.g., "Staff", "Leadership Team")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenantMembers TenantMember[] // Users with this tag (implicit many-to-many)
+  documents     Document[]     // Documents accessible with this tag (implicit many-to-many)
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@map("tags")
 }

@@ -41,7 +41,7 @@ export default function Users() {
         
         const total = users.length;
         const active = users.filter((u: any) => u.status === "ACTIVE").length;
-        const admin = users.filter((u: any) => u.role === "ADMIN").length;
+        const admin = users.filter((u: any) => u.role === "ADMIN" || u.isOwner).length;
         
         // Fetch pending invitations
         let pending = 0;

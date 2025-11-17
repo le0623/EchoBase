@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+
+interface Tag {
+  id: string;
+  name: string;
+}
 
 interface InviteUserModalProps {
   open: boolean;
@@ -25,9 +31,34 @@ export default function InviteUserModal({
   onInviteSuccess,
 }: InviteUserModalProps) {
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<"ADMIN" | "EDITOR" | "VIEWER">("EDITOR");
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingTags, setIsLoadingTags] = useState(false);
   const [error, setError] = useState("");
+
+  // Fetch tags when modal opens
+  useEffect(() => {
+    if (open) {
+      fetchTags();
+    }
+  }, [open]);
+
+  const fetchTags = async () => {
+    try {
+      setIsLoadingTags(true);
+      const response = await fetch("/api/tags");
+      if (response.ok) {
+        const data = await response.json();
+        setTags(data.tags || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch tags:", err);
+    } finally {
+      setIsLoadingTags(false);
+    }
+  };
 
   const handleInvite = async () => {
     if (!email.trim()) {
@@ -45,6 +76,13 @@ export default function InviteUserModal({
     setIsLoading(true);
     setError("");
 
+    // Validate: must have admin role OR at least one tag
+    if (!isAdmin && selectedTagIds.length === 0) {
+      setError("Please select at least one tag or assign Admin role");
+      setIsLoading(false);
+      return;
+    }
+
     try {
       // Create invitation
       const response = await fetch("/api/users", {
@@ -52,7 +90,11 @@ export default function InviteUserModal({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, role }),
+        body: JSON.stringify({ 
+          email, 
+          role: isAdmin ? "ADMIN" : undefined,
+          tagIds: selectedTagIds,
+        }),
       });
 
       if (!response.ok) {
@@ -78,7 +120,8 @@ export default function InviteUserModal({
 
       // Success - reset form and close modal
       setEmail("");
-      setRole("EDITOR");
+      setIsAdmin(false);
+      setSelectedTagIds([]);
       setError("");
       onOpenChange(false);
 
@@ -98,10 +141,19 @@ export default function InviteUserModal({
   const handleClose = () => {
     if (!isLoading) {
       setEmail("");
-      setRole("EDITOR");
+      setIsAdmin(false);
+      setSelectedTagIds([]);
       setError("");
       onOpenChange(false);
     }
+  };
+
+  const toggleTag = (tagId: string) => {
+    setSelectedTagIds(prev => 
+      prev.includes(tagId) 
+        ? prev.filter(id => id !== tagId)
+        : [...prev, tagId]
+    );
   };
 
   return (
@@ -131,27 +183,58 @@ export default function InviteUserModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="role">Role</Label>
-            <select
-              id="role"
-              value={role}
-              onChange={(e) =>
-                setRole(e.target.value as "ADMIN" | "EDITOR" | "VIEWER")
-              }
-              disabled={isLoading}
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <option value="ADMIN">Admin - Full access</option>
-              <option value="EDITOR">Editor - Can create and edit content</option>
-              <option value="VIEWER">Viewer - Read-only access</option>
-            </select>
+            <Label>System Role (Optional)</Label>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="admin"
+                checked={isAdmin}
+                onCheckedChange={(checked) => setIsAdmin(checked === true)}
+                disabled={isLoading}
+              />
+              <Label
+                htmlFor="admin"
+                className="text-sm font-normal cursor-pointer"
+              >
+                Admin - Full system access (manages users, settings, etc.)
+              </Label>
+            </div>
             <p className="text-xs text-muted-foreground">
-              {role === "ADMIN" &&
-                "Full access to all features and settings"}
-              {role === "EDITOR" &&
-                "Can create, edit, and manage documents and content"}
-              {role === "VIEWER" &&
-                "Can view documents and content but cannot make changes"}
+              Admin role is for system administration. For document access, assign tags below.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Access Tags (Custom Roles)</Label>
+            {isLoadingTags ? (
+              <p className="text-sm text-muted-foreground">Loading tags...</p>
+            ) : tags.length === 0 ? (
+              <div className="p-4 border border-dashed rounded-md">
+                <p className="text-sm text-muted-foreground">
+                  No tags available. Create tags in the Role and Permission section first.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-48 overflow-y-auto border rounded-md p-3">
+                {tags.map((tag) => (
+                  <div key={tag.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`tag-${tag.id}`}
+                      checked={selectedTagIds.includes(tag.id)}
+                      onCheckedChange={() => toggleTag(tag.id)}
+                      disabled={isLoading}
+                    />
+                    <Label
+                      htmlFor={`tag-${tag.id}`}
+                      className="text-sm font-normal cursor-pointer flex-1"
+                    >
+                      {tag.name}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Select one or more tags to grant access to documents with matching tags. Users can access documents that share at least one tag with them.
             </p>
           </div>
 

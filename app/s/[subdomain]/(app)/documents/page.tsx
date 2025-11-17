@@ -1,15 +1,33 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { formatFileSize } from "@/lib/s3";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+
+interface AccessTag {
+  id: string;
+  name: string;
+}
 
 interface Document {
   id: string;
   name: string;
   originalName: string;
   description?: string;
-  tags: string[];
+  accessTags: AccessTag[];
   fileUrl: string;
   fileSize: number;
   mimeType: string;
@@ -38,16 +56,80 @@ interface Stats {
 }
 
 export default function Document() {
+  const router = useRouter();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [stats, setStats] = useState<Stats>({ total: 0, approved: 0, pending: 0, rejected: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [error, setError] = useState("");
+  const [editingDocument, setEditingDocument] = useState<Document | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [selectedAccessTagIds, setSelectedAccessTagIds] = useState<string[]>([]);
+  const [availableTags, setAvailableTags] = useState<AccessTag[]>([]);
+  const [isLoadingTags, setIsLoadingTags] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editError, setEditError] = useState("");
+  const [deleteConfirmDoc, setDeleteConfirmDoc] = useState<Document | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  const [isCheckingPermission, setIsCheckingPermission] = useState(true);
+
+  // Check admin permission on mount
+  useEffect(() => {
+    const checkPermission = async () => {
+      try {
+        const response = await fetch('/api/user/membership');
+        if (response.ok) {
+          const data = await response.json();
+          if (!data.isAdmin) {
+            router.push('/dashboard');
+            return;
+          }
+        } else {
+          router.push('/dashboard');
+          return;
+        }
+      } catch (error) {
+        console.error('Failed to check permission:', error);
+        router.push('/dashboard');
+        return;
+      } finally {
+        setIsCheckingPermission(false);
+      }
+    };
+
+    checkPermission();
+  }, [router]);
 
   useEffect(() => {
-    fetchDocuments();
-  }, [statusFilter]);
+    if (!isCheckingPermission) {
+      fetchDocuments();
+    }
+  }, [statusFilter, isCheckingPermission]);
+
+  useEffect(() => {
+    if (isEditDialogOpen) {
+      fetchTags();
+    }
+  }, [isEditDialogOpen]);
+
+  const fetchTags = async () => {
+    try {
+      setIsLoadingTags(true);
+      const response = await fetch("/api/tags");
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableTags(data.tags || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch tags:", err);
+    } finally {
+      setIsLoadingTags(false);
+    }
+  };
 
   const fetchDocuments = async () => {
     try {
@@ -97,6 +179,114 @@ export default function Document() {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
+  if (isCheckingPermission) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="w-8 h-8 border-4 border-gray-200 border-t-primary rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  const handleEdit = (doc: Document) => {
+    setEditingDocument(doc);
+    setEditName(doc.name);
+    setEditDescription(doc.description || "");
+    setSelectedAccessTagIds(doc.accessTags.map(tag => tag.id));
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingDocument || !editName.trim()) {
+      setEditError("Document name is required");
+      return;
+    }
+
+    setIsSaving(true);
+    setEditError("");
+
+    try {
+      // Update document metadata
+      const updateResponse = await fetch(`/api/documents/${editingDocument.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: editName.trim(),
+          description: editDescription.trim() || null,
+        }),
+      });
+
+      if (!updateResponse.ok) {
+        const errorData = await updateResponse.json();
+        throw new Error(errorData.error || "Failed to update document");
+      }
+
+      // Update access tags
+      const tagsResponse = await fetch(`/api/documents/${editingDocument.id}/tags`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tagIds: selectedAccessTagIds,
+        }),
+      });
+
+      if (!tagsResponse.ok) {
+        const errorData = await tagsResponse.json();
+        throw new Error(errorData.error || "Failed to update access tags");
+      }
+
+      // Refresh documents list
+      await fetchDocuments();
+      setIsEditDialogOpen(false);
+      setEditingDocument(null);
+      setEditError("");
+      alert("Document updated successfully!");
+    } catch (err: any) {
+      setEditError(err.message || "Failed to update document");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteConfirmDoc) return;
+
+    setIsDeleting(true);
+    setDeleteError("");
+
+    try {
+      const response = await fetch(`/api/documents/${deleteConfirmDoc.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to delete document");
+      }
+
+      // Refresh documents list
+      await fetchDocuments();
+      setDeleteConfirmDoc(null);
+      setDeleteError("");
+      alert("Document deleted successfully!");
+    } catch (err: any) {
+      setDeleteError(err.message || "Failed to delete document");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const toggleAccessTag = (tagId: string) => {
+    setSelectedAccessTagIds(prev => 
+      prev.includes(tagId) 
+        ? prev.filter(id => id !== tagId)
+        : [...prev, tagId]
+    );
   };
 
   return (
@@ -259,6 +449,7 @@ export default function Document() {
                         <th>Author</th>
                         <th>Version</th>
                         <th>Status</th>
+                        <th>Access Tags</th>
                         <th>Last Modified</th>
                         <th className="text-center">Action</th>
                       </tr>
@@ -281,18 +472,6 @@ export default function Document() {
                                   {doc.name}
                                 </span>
                                 <span className="text-xs font-medium text-nowrap">{formatFileSize(doc.fileSize)}</span>
-                                {doc.tags && doc.tags.length > 0 && (
-                                  <div className="flex flex-wrap gap-1 mt-1">
-                                    {doc.tags.slice(0, 2).map((tag, idx) => (
-                                      <span key={idx} className="px-2 py-0.5 text-xs font-semibold rounded-full border border-gray-200 bg-gray-50">
-                                        {tag}
-                                      </span>
-                                    ))}
-                                    {doc.tags.length > 2 && (
-                                      <span className="text-xs text-gray-500">+{doc.tags.length - 2}</span>
-                                    )}
-                                  </div>
-                                )}
                               </div>
                             </div>
                           </td>
@@ -326,6 +505,22 @@ export default function Document() {
                           <td>
                             {getStatusBadge(doc.status)}
                           </td>
+                          <td>
+                            {doc.accessTags && doc.accessTags.length > 0 ? (
+                              <div className="flex flex-wrap gap-1">
+                                {doc.accessTags.map((tag) => (
+                                  <span 
+                                    key={tag.id} 
+                                    className="px-2 py-0.5 text-xs font-semibold rounded-full border border-blue-200 bg-blue-50 text-blue-700"
+                                  >
+                                    {tag.name}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-gray-400">No access tags</span>
+                            )}
+                          </td>
                           <td className="text-nowrap">
                             <span className="font-medium">{formatDate(doc.updatedAt)}</span>
                           </td>
@@ -334,9 +529,28 @@ export default function Document() {
                               <button 
                                 className="btn btn-primary-light !size-8 !p-0 !rounded-full !flex justify-center items-center"
                                 onClick={() => window.open(doc.fileUrl, '_blank')}
+                                title="View"
                               >
                                 <Image src="/images/icons/eye.svg" alt="View" width={16} height={16} />
                               </button>
+                              {doc.status === 'APPROVED' && (
+                                <>
+                                  <button 
+                                    className="btn btn-primary-light !size-8 !p-0 !rounded-full !flex justify-center items-center"
+                                    onClick={() => handleEdit(doc)}
+                                    title="Edit"
+                                  >
+                                    <Image src="/images/icons/pencil.svg" alt="Edit" width={16} height={16} />
+                                  </button>
+                                  <button 
+                                    className="btn btn-primary-light !size-8 !p-0 !rounded-full !flex justify-center items-center text-red-600 hover:text-red-700"
+                                    onClick={() => setDeleteConfirmDoc(doc)}
+                                    title="Delete"
+                                  >
+                                    <Image src="/images/icons/trash.svg" alt="Delete" width={16} height={16} />
+                                  </button>
+                                </>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -350,6 +564,143 @@ export default function Document() {
         </div>
 
       </div>
+
+      {/* Edit Document Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Edit Document</DialogTitle>
+            <DialogDescription>
+              Update document information and access tags.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {editError && (
+              <div className="rounded-md bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm">
+                {editError}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="editName">Document Name *</Label>
+              <Input
+                id="editName"
+                value={editName}
+                onChange={(e) => {
+                  setEditName(e.target.value);
+                  setEditError("");
+                }}
+                disabled={isSaving}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="editDescription">Description</Label>
+              <textarea
+                id="editDescription"
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                disabled={isSaving}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                rows={3}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Access Tags</Label>
+              {isLoadingTags ? (
+                <div className="p-4 border border-gray-300 rounded-lg bg-gray-50">
+                  <p className="text-sm text-gray-500">Loading tags...</p>
+                </div>
+              ) : availableTags.length === 0 ? (
+                <div className="p-4 border border-dashed border-gray-300 rounded-lg bg-gray-50">
+                  <p className="text-sm text-gray-500">
+                    No access tags available.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-300 rounded-lg p-4 bg-white">
+                  {availableTags.map((tag) => (
+                    <div key={tag.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`edit-tag-${tag.id}`}
+                        checked={selectedAccessTagIds.includes(tag.id)}
+                        onCheckedChange={() => toggleAccessTag(tag.id)}
+                        disabled={isSaving}
+                      />
+                      <Label
+                        htmlFor={`edit-tag-${tag.id}`}
+                        className="text-sm font-normal cursor-pointer flex-1"
+                      >
+                        {tag.name}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Select one or more tags to control who can access this document. Leave empty to make it accessible to all users.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsEditDialogOpen(false);
+                setEditingDocument(null);
+                setEditError("");
+              }}
+              disabled={isSaving}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={isSaving || !editName.trim()}>
+              {isSaving ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteConfirmDoc} onOpenChange={(open) => !open && setDeleteConfirmDoc(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Delete Document</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{deleteConfirmDoc?.name}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          {deleteError && (
+            <div className="rounded-md bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm">
+              {deleteError}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteConfirmDoc(null);
+                setDeleteError("");
+              }}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

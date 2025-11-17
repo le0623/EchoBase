@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireTenant } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { getDocumentAccessWhereClause } from '@/lib/tags';
 
 // GET /api/documents - Get all documents for the tenant
 export async function GET(request: NextRequest) {
@@ -14,24 +15,30 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20');
     const skip = (page - 1) * limit;
 
-    // Build where clause
-    const where: any = {
-      tenantId: tenant.id,
-    };
+    // Get base where clause with tag-based access control
+    const accessWhere = await getDocumentAccessWhereClause(user.id, tenant.id);
+
+    // Build where clause combining access control with filters
+    const whereConditions: any[] = [accessWhere];
 
     if (status && ['PENDING', 'APPROVED', 'REJECTED'].includes(status)) {
-      where.status = status;
+      whereConditions.push({ status });
     }
 
     if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
-        { tags: { has: search } },
-        { submittedByUser: { name: { contains: search, mode: 'insensitive' } } },
-        { submittedByUser: { email: { contains: search, mode: 'insensitive' } } },
-      ];
+      // Add search filters
+      whereConditions.push({
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } },
+          { submittedByUser: { name: { contains: search, mode: 'insensitive' } } },
+          { submittedByUser: { email: { contains: search, mode: 'insensitive' } } },
+        ],
+      });
     }
+
+    // Combine all conditions with AND (if multiple conditions)
+    const where = whereConditions.length === 1 ? whereConditions[0] : { AND: whereConditions };
 
     // Get documents with pagination
     const [documents, total] = await Promise.all([
@@ -60,6 +67,12 @@ export async function GET(request: NextRequest) {
               email: true,
             },
           },
+          accessTags: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
         },
         orderBy: {
           createdAt: 'desc',
@@ -76,7 +89,10 @@ export async function GET(request: NextRequest) {
       name: doc.name,
       originalName: doc.originalName,
       description: doc.description,
-      tags: doc.tags,
+      accessTags: doc.accessTags.map(tag => ({
+        id: tag.id,
+        name: tag.name,
+      })),
       fileUrl: doc.fileUrl,
       fileKey: doc.fileKey,
       fileSize: doc.fileSize,

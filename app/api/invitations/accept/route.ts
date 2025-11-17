@@ -90,13 +90,16 @@ export async function POST(request: NextRequest) {
         status: existingUser.status,
       };
 
-      // Create tenant membership
+      // Create tenant membership with tags
       await prisma.tenantMember.create({
         data: {
           userId: existingUser.id,
           tenantId: invitation.tenantId,
-          role: invitation.role,
+          role: invitation.role || null, // Only ADMIN or null
           isOwner: false,
+          tags: {
+            connect: invitation.tagIds?.map((tagId: string) => ({ id: tagId })) || [],
+          },
         },
       });
 
@@ -140,13 +143,16 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Create tenant membership
+      // Create tenant membership with tags
       await prisma.tenantMember.create({
         data: {
           userId: newUser.id,
           tenantId: invitation.tenantId,
-          role: invitation.role,
+          role: invitation.role || null, // Only ADMIN or null
           isOwner: false,
+          tags: {
+            connect: invitation.tagIds?.map((tagId: string) => ({ id: tagId })) || [],
+          },
         },
       });
 

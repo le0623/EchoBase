@@ -19,21 +19,44 @@ interface SidebarProps {
   onClose: () => void;
 }
 
-const navItems = [
-  { id: 'dashboard', label: 'Dashboard', icon: HomeIcon, active: true },
-  { id: 'analytics', label: 'Analytics', icon: AnalyticsIcon, active: false },
-  { id: 'users', label: 'User Management', icon: UserIcon, active: false },
-  { id: 'upload', label: 'Upload', icon: UploadIcon, active: false },
-  { id: 'documents', label: 'Documents', icon: DocumentIcon, active: false },
-  { id: 'approval', label: 'Document Approval', icon: ApprovalIcon, active: false },
-  { id: 'search', label: 'AI-Powerd Search', icon: LightningIcon, active: false },
-  { id: 'billing', label: 'Billing & Usage', icon: BillingIcon, active: false },
-  { id: 'integration', label: 'API Key', icon: KeyIcon, active: false },
-  { id: 'settings', label: 'Settings', icon: SettingsIcon, active: false },
+const allNavItems = [
+  { id: 'dashboard', label: 'Dashboard', icon: HomeIcon, active: true, adminOnly: false },
+  { id: 'analytics', label: 'Analytics', icon: AnalyticsIcon, active: false, adminOnly: false },
+  { id: 'users', label: 'User Management', icon: UserIcon, active: false, adminOnly: false },
+  { id: 'upload', label: 'Upload', icon: UploadIcon, active: false, adminOnly: true },
+  { id: 'documents', label: 'Documents', icon: DocumentIcon, active: false, adminOnly: true },
+  { id: 'approval', label: 'Document Approval', icon: ApprovalIcon, active: false, adminOnly: true },
+  { id: 'search', label: 'AI-Powerd Search', icon: LightningIcon, active: false, adminOnly: false },
+  { id: 'billing', label: 'Billing & Usage', icon: BillingIcon, active: false, adminOnly: false },
+  { id: 'integration', label: 'API Key', icon: KeyIcon, active: false, adminOnly: false },
+  { id: 'settings', label: 'Settings', icon: SettingsIcon, active: false, adminOnly: false },
 ];
 
 export default function DashboardSidebar({ isOpen, onClose }: SidebarProps) {
   const [activeItem, setActiveItem] = useState('dashboard');
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isLoadingMembership, setIsLoadingMembership] = useState(true);
+
+  // Fetch user membership to check if admin
+  useEffect(() => {
+    const fetchMembership = async () => {
+      try {
+        setIsLoadingMembership(true);
+        const response = await fetch('/api/user/membership');
+        if (response.ok) {
+          const data = await response.json();
+          setIsAdmin(data.isAdmin || false);
+        }
+      } catch (error) {
+        console.error('Failed to fetch user membership:', error);
+        setIsAdmin(false);
+      } finally {
+        setIsLoadingMembership(false);
+      }
+    };
+
+    fetchMembership();
+  }, []);
 
   // Close sidebar when clicking outside on mobile
   useEffect(() => {
@@ -49,6 +72,9 @@ export default function DashboardSidebar({ isOpen, onClose }: SidebarProps) {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen, onClose]);
+
+  // Filter navigation items based on admin status
+  const navItems = allNavItems.filter(item => !item.adminOnly || isAdmin);
 
   // Prevent body scroll when sidebar is open on mobile
   useEffect(() => {

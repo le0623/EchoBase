@@ -15,10 +15,10 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Check if user has permission to upload documents
-    if (!userMembership || (userMembership.role !== 'ADMIN' && userMembership.role !== 'EDITOR')) {
+    // Check if user has permission to upload documents (Only Admin can upload)
+    if (!userMembership || userMembership.role !== 'ADMIN') {
       return NextResponse.json(
-        { error: 'Insufficient permissions to upload documents' },
+        { error: 'Insufficient permissions to upload documents. Only admins can upload.' },
         { status: 403 }
       );
     }
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File;
     const name = formData.get('name') as string;
     const description = formData.get('description') as string;
-    const tags = formData.get('tags') as string;
+    const accessTagIds = formData.get('accessTagIds') as string; // Access control tags (comma-separated IDs)
 
     if (!file) {
       return NextResponse.json(
@@ -71,8 +71,27 @@ export async function POST(request: NextRequest) {
       userId: user.id,
     });
 
-    // Parse tags
-    const tagsArray = tags ? tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0) : [];
+    // Parse access tag IDs
+    const accessTagIdsArray = accessTagIds 
+      ? accessTagIds.split(',').map(id => id.trim()).filter(id => id.length > 0)
+      : [];
+
+    // Validate access tags if provided
+    if (accessTagIdsArray.length > 0) {
+      const validTags = await prisma.tag.findMany({
+        where: {
+          id: { in: accessTagIdsArray },
+          tenantId: tenant.id,
+        },
+      });
+
+      if (validTags.length !== accessTagIdsArray.length) {
+        return NextResponse.json(
+          { error: 'One or more access tags not found or do not belong to this tenant' },
+          { status: 400 }
+        );
+      }
+    }
 
     // Save document to database
     const document = await prisma.document.create({
@@ -80,13 +99,15 @@ export async function POST(request: NextRequest) {
         name: name.trim(),
         originalName: file.name,
         description: description?.trim() || null,
-        tags: tagsArray,
         fileUrl: uploadResult.url,
         fileKey: uploadResult.key,
         fileSize: uploadResult.size,
         mimeType: uploadResult.mimeType,
         submittedBy: user.id,
         tenantId: tenant.id,
+        accessTags: {
+          connect: accessTagIdsArray.map(tagId => ({ id: tagId })),
+        },
       },
       include: {
         submittedByUser: {
@@ -106,7 +127,6 @@ export async function POST(request: NextRequest) {
         name: document.name,
         originalName: document.originalName,
         description: document.description,
-        tags: document.tags,
         fileUrl: document.fileUrl,
         fileSize: document.fileSize,
         mimeType: document.mimeType,

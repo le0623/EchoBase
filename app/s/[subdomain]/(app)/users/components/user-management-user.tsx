@@ -12,6 +12,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { MoreVertical, Edit, Trash2 } from "lucide-react";
 
+interface Tag {
+  id: string;
+  name: string;
+}
+
 interface User {
   id: string;
   name: string | null;
@@ -20,8 +25,9 @@ interface User {
   status: string;
   lastActive: string;
   createdAt: string;
-  role: string;
+  role: string | null;
   isOwner: boolean;
+  tags: Tag[];
 }
 
 export default function UsersTab() {
@@ -124,7 +130,7 @@ export default function UsersTab() {
     );
   };
 
-  const getRoleBadge = (role: string, isOwner: boolean) => {
+  const getRoleBadge = (role: string | null, isOwner: boolean, tags: Array<{ id: string; name: string }>) => {
     if (isOwner) {
       return (
         <span className="px-3 py-0.5 text-xs font-semibold rounded-full border border-blue-200 bg-blue-50 text-blue-700">
@@ -132,10 +138,33 @@ export default function UsersTab() {
         </span>
       );
     }
+    if (role === "ADMIN") {
+      return (
+        <span className="px-3 py-0.5 text-xs font-semibold rounded-full border border-purple-200 bg-purple-50 text-purple-700">
+          Admin
+        </span>
+      );
+    }
+    return null;
+  };
+
+  const getTagsBadges = (tags: Array<{ id: string; name: string }>) => {
+    if (!tags || tags.length === 0) {
+      return (
+        <span className="text-xs text-gray-400">No tags assigned</span>
+      );
+    }
     return (
-      <span className="px-3 py-0.5 text-xs font-semibold rounded-full border border-gray-200 bg-gray-50">
-        {role}
-      </span>
+      <div className="flex flex-wrap gap-1">
+        {tags.map((tag) => (
+          <span
+            key={tag.id}
+            className="px-2 py-0.5 text-xs font-semibold rounded-full border border-gray-200 bg-gray-50 text-gray-700"
+          >
+            {tag.name}
+          </span>
+        ))}
+      </div>
     );
   };
 
@@ -204,7 +233,10 @@ export default function UsersTab() {
               </td>
 
               <td className="text-nowrap">
-                {getRoleBadge(user.role, user.isOwner)}
+                <div className="flex flex-col gap-1">
+                  {getRoleBadge(user.role, user.isOwner, user.tags || [])}
+                  {getTagsBadges(user.tags || [])}
+                </div>
               </td>
 
               <td>{getStatusBadge(user.status)}</td>

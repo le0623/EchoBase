@@ -8,19 +8,21 @@ const openai = new OpenAI({
 
 /**
  * Generate an answer using RAG (Retrieval-Augmented Generation)
+ * @param userId Optional: if provided, filters chunks by user's access tags
  */
 export async function generateRAGAnswer(
   query: string,
   tenantId: string,
-  conversationHistory: Array<{ role: 'USER' | 'ASSISTANT'; content: string }> = []
+  conversationHistory: Array<{ role: 'USER' | 'ASSISTANT'; content: string }> = [],
+  userId?: string
 ): Promise<string> {
   try {
     if (!process.env.OPENAI_API_KEY) {
       throw new Error('OpenAI API key is not configured');
     }
 
-    // Retrieve relevant chunks
-    const relevantChunks = await retrieveRelevantChunks(query, tenantId, 5);
+    // Retrieve relevant chunks (filtered by user tags if userId provided)
+    const relevantChunks = await retrieveRelevantChunks(query, tenantId, 5, userId);
 
     if (relevantChunks.length === 0) {
       return 'I could not find any relevant information in the knowledge base to answer your question. Please make sure documents have been uploaded and approved.';

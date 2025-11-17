@@ -47,6 +47,12 @@ export async function GET(request: NextRequest) {
           select: {
             role: true,
             isOwner: true,
+            tags: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
       },
@@ -60,6 +66,7 @@ export async function GET(request: NextRequest) {
         ...user,
         role: user.tenants[0]?.role,
         isOwner: user.tenants[0]?.isOwner,
+        tags: user.tenants[0]?.tags || [],
       }))
     });
   } catch (error) {
@@ -93,7 +100,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { email, role = 'EDITOR' } = body;
+    const { email, role, tagIds = [] } = body; // role is optional (only ADMIN), tagIds are the custom roles
 
     if (!email) {
       return NextResponse.json(
@@ -102,12 +109,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate role
-    if (!['ADMIN', 'EDITOR', 'VIEWER'].includes(role)) {
+    // Validate role (only ADMIN is allowed, or null/undefined for regular users)
+    if (role && role !== 'ADMIN') {
       return NextResponse.json(
-        { error: 'Invalid role' },
+        { error: 'Invalid role. Only ADMIN is allowed for system administration.' },
         { status: 400 }
       );
+    }
+
+    // Validate tagIds if provided
+    if (tagIds && Array.isArray(tagIds) && tagIds.length > 0) {
+      // Verify all tags belong to this tenant
+      const tags = await prisma.tag.findMany({
+        where: {
+          id: { in: tagIds },
+          tenantId: tenant.id,
+        },
+      });
+
+      if (tags.length !== tagIds.length) {
+        return NextResponse.json(
+          { error: 'One or more tags not found or do not belong to this tenant' },
+          { status: 400 }
+        );
+      }
     }
 
     // Check if user already belongs to this tenant
@@ -154,7 +179,8 @@ export async function POST(request: NextRequest) {
     const invitation = await prisma.userInvitation.create({
       data: {
         email,
-        role: role,
+        role: role || null, // Only ADMIN or null
+        tagIds: tagIds || [], // Custom roles via tags
         token,
         invitedBy: user.id,
         tenantId: tenant.id,
@@ -169,6 +195,7 @@ export async function POST(request: NextRequest) {
         id: invitation.id,
         email: invitation.email,
         role: invitation.role,
+        tagIds: invitation.tagIds,
         expiresAt: invitation.expiresAt,
       },
     });

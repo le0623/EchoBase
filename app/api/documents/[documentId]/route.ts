@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireTenant } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { deleteFromS3 } from '@/lib/s3';
+import { canUserAccessDocument } from '@/lib/tags';
 
 // GET /api/documents/[documentId] - Get a specific document
 export async function GET(
@@ -40,6 +41,12 @@ export async function GET(
             email: true,
           },
         },
+        accessTags: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
     });
 
@@ -50,13 +57,25 @@ export async function GET(
       );
     }
 
+    // Check if user can access this document based on tags
+    const canAccess = await canUserAccessDocument(user.id, tenant.id, documentId);
+    if (!canAccess) {
+      return NextResponse.json(
+        { error: 'You do not have permission to access this document' },
+        { status: 403 }
+      );
+    }
+
     return NextResponse.json({
       document: {
         id: document.id,
         name: document.name,
         originalName: document.originalName,
         description: document.description,
-        tags: document.tags,
+        accessTags: document.accessTags.map(tag => ({
+          id: tag.id,
+          name: tag.name,
+        })),
         fileUrl: document.fileUrl,
         fileKey: document.fileKey,
         fileSize: document.fileSize,
@@ -92,7 +111,7 @@ export async function PUT(
     const { user, tenant } = await requireTenant(request);
 
     const body = await request.json();
-    const { name, description, tags } = body;
+    const { name, description } = body;
 
     // Check if user has permission to update document
     const document = await prisma.document.findFirst({
@@ -125,16 +144,12 @@ export async function PUT(
       );
     }
 
-    // Parse tags
-    const tagsArray = tags ? tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0) : document.tags;
-
     // Update document
     const updatedDocument = await prisma.document.update({
       where: { id: documentId },
       data: {
         ...(name && { name: name.trim() }),
         ...(description !== undefined && { description: description?.trim() || null }),
-        tags: tagsArray,
       },
       include: {
         submittedByUser: {
@@ -159,6 +174,12 @@ export async function PUT(
             email: true,
           },
         },
+        accessTags: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
     });
 
@@ -169,7 +190,10 @@ export async function PUT(
         name: updatedDocument.name,
         originalName: updatedDocument.originalName,
         description: updatedDocument.description,
-        tags: updatedDocument.tags,
+        accessTags: updatedDocument.accessTags.map(tag => ({
+          id: tag.id,
+          name: tag.name,
+        })),
         fileUrl: updatedDocument.fileUrl,
         fileKey: updatedDocument.fileKey,
         fileSize: updatedDocument.fileSize,
