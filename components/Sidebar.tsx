@@ -12,6 +12,7 @@ import SettingsIcon from './icons/SettingsIcon';
 import KeyIcon from './icons/KeyIcon';
 import BillingIcon from './icons/BillingIcon';
 import UploadIcon from './icons/UploadIcon';
+import WidgetIcon from './icons/WidgetIcon';
 import Link from 'next/link';
 
 interface SidebarProps {
@@ -29,6 +30,7 @@ const allNavItems = [
   { id: 'search', label: 'AI-Powerd Search', icon: LightningIcon, active: false, adminOnly: false },
   { id: 'billing', label: 'Billing & Usage', icon: BillingIcon, active: false, adminOnly: false },
   { id: 'integration', label: 'API Key', icon: KeyIcon, active: false, adminOnly: false },
+  { id: 'widget', label: 'Widget', icon: WidgetIcon, active: false, adminOnly: true },
   { id: 'settings', label: 'Settings', icon: SettingsIcon, active: false, adminOnly: false },
 ];
 

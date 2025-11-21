@@ -54,6 +54,62 @@ export default function RootLayout({
     }
   }, [session, subdomain]);
 
+  // Load widget script dynamically
+  useEffect(() => {
+    const loadWidget = async () => {
+      try {
+        // Remove any existing widget first
+        const existingContainer = document.getElementById('echobase-widget-container');
+        if (existingContainer) {
+          existingContainer.remove();
+        }
+        
+        // Remove existing script if any
+        const existingScript = document.querySelector('script[src*="/api/widget/"]');
+        if (existingScript) {
+          existingScript.remove();
+        }
+
+        // Reset widget flag
+        if ((window as any).EchoBaseWidget) {
+          delete (window as any).EchoBaseWidget;
+        }
+
+        // Fetch widget configuration for current tenant
+        const response = await fetch('/api/widget');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.widget && data.widget.enabled && data.widget.widgetId) {
+            // Get base URL
+            const baseUrl = window.location.origin.includes('/s/')
+              ? window.location.origin.split('/s/')[0]
+              : window.location.origin;
+
+            // Add cache-busting parameter using updatedAt timestamp
+            const cacheBuster = data.widget.updatedAt 
+              ? `?v=${new Date(data.widget.updatedAt).getTime()}` 
+              : `?v=${Date.now()}`;
+
+            // Create and load script
+            const script = document.createElement('script');
+            script.src = `${baseUrl}/api/widget/${data.widget.widgetId}/embed.js${cacheBuster}`;
+            script.async = true;
+            script.onerror = () => {
+              console.error('Failed to load widget script');
+            };
+            document.head.appendChild(script);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading widget:', error);
+      }
+    };
+
+    if (session && currentTenant && !loading) {
+      loadWidget();
+    }
+  }, [session, currentTenant, loading]);
+
   const user = session?.user ? {
     name: session.user.name || 'User',
     email: session.user.email || '',

@@ -79,6 +79,7 @@ model Tenant {
   conversations Conversation[]
   apiKeys       ApiKey[]
   tags           Tag[] // Access control tags/departments
+  widget         Widget? // Widget configuration
 
   @@map("tenants")
 }
@@ -207,6 +208,27 @@ model Message {
 enum MessageRole {
   USER
   ASSISTANT
+}
+
+// Widget configuration for embeddable AI assistant
+model Widget {
+  id              String   @id @default(cuid())
+  tenantId        String   @unique @map("tenant_id")
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  enabled         Boolean  @default(true)
+  widgetId        String   @unique @map("widget_id") // Public widget ID for embedding
+  primaryColor    String   @default("#3B82F6") @map("primary_color")
+  secondaryColor  String   @default("#1E40AF") @map("secondary_color")
+  position        String   @default("bottom-right") // bottom-right, bottom-left, top-right, top-left
+  title           String   @default("AI Assistant") // Widget title/header
+  welcomeMessage  String   @default("Hello! How can I help you today?") @map("welcome_message")
+  placeholder     String   @default("Type your message...") // Input placeholder
+  showBranding    Boolean  @default(true) @map("show_branding")
+  customCss       String?  @map("custom_css") // Custom CSS for advanced styling
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("widgets")
 }
 
 // API Key management models
