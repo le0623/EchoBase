@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { extractSubdomain } from '@/lib/subdomain';
 
 export default withAuth(
-  function middleware(req) {
+  function proxy(req) {
 
     const { pathname } = req.nextUrl;
     const subdomain = extractSubdomain(req);
