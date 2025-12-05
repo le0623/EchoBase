@@ -31,6 +31,7 @@ export async function GET(
   const config = {
     widgetId: '${widget.widgetId}',
     apiUrl: '${baseUrl}/api/widget/${widget.widgetId}',
+    iframeUrl: '${baseUrl}/api/widget/${widget.widgetId}/iframe',
     primaryColor: '${widget.primaryColor}',
     secondaryColor: '${widget.secondaryColor}',
     position: '${widget.position}',
@@ -38,7 +39,8 @@ export async function GET(
     welcomeMessage: ${JSON.stringify(widget.welcomeMessage)},
     placeholder: ${JSON.stringify(widget.placeholder)},
     showBranding: ${widget.showBranding},
-    customCss: ${widget.customCss ? JSON.stringify(widget.customCss) : 'null'}
+    customCss: ${widget.customCss ? JSON.stringify(widget.customCss) : 'null'},
+    useIframe: false // Can be set to true to use iframe mode
   };
 
   // Remove existing widget if present

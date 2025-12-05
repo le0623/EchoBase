@@ -82,7 +82,7 @@ export default function WidgetPage() {
         const data = await response.json();
       if (data.widget) {
         setConfig(data.widget);
-        generateEmbedCode(data.widget.widgetId, data.widget.updatedAt);
+        generateEmbedCode(data.widget.widgetId, data.widget.updatedAt, false);
       } else {
           // Generate widget ID if not exists
           const newWidgetId = `widget_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -99,7 +99,7 @@ export default function WidgetPage() {
     }
   };
 
-  const generateEmbedCode = (widgetId: string, updatedAt?: string) => {
+  const generateEmbedCode = (widgetId: string, updatedAt?: string, useIframe: boolean = false) => {
     // Get base URL (remove subdomain path)
     const currentUrl = window.location.origin;
     const baseUrl = currentUrl.includes('/s/') 
@@ -111,7 +111,20 @@ export default function WidgetPage() {
       ? `?v=${new Date(updatedAt).getTime()}` 
       : `?v=${Date.now()}`;
     
-    const code = `<script>
+    let code: string;
+    if (useIframe) {
+      // Iframe embed code
+      code = `<iframe 
+  src="${baseUrl}/api/widget/${widgetId}/iframe${cacheBuster}"
+  width="400"
+  height="600"
+  frameborder="0"
+  style="border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);"
+  allow="microphone; camera"
+></iframe>`;
+    } else {
+      // Script embed code
+      code = `<script>
   (function() {
     var script = document.createElement('script');
     script.src = '${baseUrl}/api/widget/${widgetId}/embed.js${cacheBuster}';
@@ -119,6 +132,7 @@ export default function WidgetPage() {
     document.head.appendChild(script);
   })();
 </script>`;
+    }
     setEmbedCode(code);
   };
 
@@ -144,7 +158,7 @@ export default function WidgetPage() {
       if (response.ok) {
         const data = await response.json();
         setConfig(data.widget);
-        generateEmbedCode(data.widget.widgetId, data.widget.updatedAt);
+        generateEmbedCode(data.widget.widgetId, data.widget.updatedAt, false);
         setSuccess("Widget configuration saved successfully!");
         setTimeout(() => setSuccess(""), 3000);
       } else {
@@ -382,6 +396,30 @@ export default function WidgetPage() {
               <div className="space-y-6">
                 <h2 className="text-xl font-semibold text-gray-900">Embed Code</h2>
 
+                {/* Embed Mode Toggle */}
+                <div className="flex gap-4 mb-4">
+                  <button
+                    onClick={() => generateEmbedCode(config.widgetId, config.updatedAt, false)}
+                    className={`px-4 py-2 rounded-lg font-medium ${
+                      embedCode.includes('embed.js') 
+                        ? 'bg-blue-600 text-white' 
+                        : 'bg-gray-200 text-gray-700'
+                    }`}
+                  >
+                    Script Mode
+                  </button>
+                  <button
+                    onClick={() => generateEmbedCode(config.widgetId, config.updatedAt, true)}
+                    className={`px-4 py-2 rounded-lg font-medium ${
+                      embedCode.includes('iframe') 
+                        ? 'bg-blue-600 text-white' 
+                        : 'bg-gray-200 text-gray-700'
+                    }`}
+                  >
+                    Iframe Mode
+                  </button>
+                </div>
+
                 {/* Embed Code */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -455,6 +493,46 @@ export default function WidgetPage() {
                       </div>
                     </div>
                   </div>
+                </div>
+
+                {/* JavaScript SDK Section */}
+                <div className="mt-8 pt-8 border-t border-gray-200">
+                  <h2 className="text-xl font-semibold text-gray-900 mb-4">JavaScript SDK for AI-Powered Search</h2>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <p className="text-sm text-blue-800 mb-2">
+                      Use our JavaScript SDK to integrate AI-powered search directly into your application.
+                    </p>
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-xs font-semibold text-blue-900 mb-1">1. Include the SDK:</p>
+                        <code className="block text-xs bg-white p-2 rounded border border-blue-300 overflow-x-auto">
+                          {(() => {
+                            const currentUrl = typeof window !== 'undefined' ? window.location.origin : '';
+                            const baseUrl = currentUrl.includes('/s/') 
+                              ? currentUrl.split('/s/')[0] 
+                              : currentUrl || 'https://your-subdomain.echobase.com';
+                            return `<script src="${baseUrl}/api/sdk/echobase-sdk.js"></script>`;
+                          })()}
+                        </code>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-blue-900 mb-1">2. Initialize and use:</p>
+                        <code className="block text-xs bg-white p-2 rounded border border-blue-300 whitespace-pre overflow-x-auto">
+{`const sdk = new EchoBase({
+  apiKey: 'your-api-key',
+  subdomain: 'your-subdomain'
+});
+
+// Perform search
+const result = await sdk.search('What is the company policy?');
+console.log(result.answer);`}
+                        </code>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-600">
+                    Get your API key from the <a href="/integration" className="text-blue-600 hover:underline">API Key</a> page.
+                  </p>
                 </div>
               </div>
             </div>
