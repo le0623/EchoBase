@@ -22,7 +22,7 @@ export async function generateMetadata({
   }
 
   return {
-    title: `${tenant.name} - EchoBase`,
+    title: `${tenant.name} - EnduroShield Hub`,
     description: `Welcome to ${tenant.name} organization`
   };
 }

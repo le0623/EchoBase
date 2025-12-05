@@ -44,21 +44,21 @@ export async function GET(
   };
 
   // Remove existing widget if present
-  const existingContainer = document.getElementById('echobase-widget-container');
+  const existingContainer = document.getElementById('enduroshieldhub-widget-container');
   if (existingContainer) {
     existingContainer.remove();
   }
   
   // Prevent multiple initializations (check after cleanup)
-  if (window.EchoBaseWidget && window.EchoBaseWidget.initialized) {
+  if (window.EnduroShieldHubWidget && window.EnduroShieldHubWidget.initialized) {
     // Reset if already initialized to allow re-initialization
-    window.EchoBaseWidget = { initialized: false };
+    window.EnduroShieldHubWidget = { initialized: false };
   }
 
   // Create widget container
   function createWidget() {
     const widgetContainer = document.createElement('div');
-    widgetContainer.id = 'echobase-widget-container';
+    widgetContainer.id = 'enduroshieldhub-widget-container';
     widgetContainer.style.cssText = \`
       position: fixed;
       \${config.position.includes('right') ? 'right: 20px;' : 'left: 20px;'}
@@ -69,7 +69,7 @@ export async function GET(
 
     // Widget button (toggle)
     const widgetButton = document.createElement('div');
-    widgetButton.id = 'echobase-widget-button';
+    widgetButton.id = 'enduroshieldhub-widget-button';
     widgetButton.style.cssText = \`
       width: 60px;
       height: 60px;
@@ -89,7 +89,7 @@ export async function GET(
 
     // Widget window
     const widgetWindow = document.createElement('div');
-    widgetWindow.id = 'echobase-widget-window';
+    widgetWindow.id = 'enduroshieldhub-widget-window';
     widgetWindow.style.cssText = \`
       position: absolute;
       \${config.position.includes('right') ? 'right: 0;' : 'left: 0;'}
@@ -117,12 +117,12 @@ export async function GET(
     \`;
     header.innerHTML = \`
       <span>\${config.title}</span>
-      <button id="echobase-widget-close" style="background: none; border: none; color: white; cursor: pointer; font-size: 20px;">&times;</button>
+      <button id="enduroshieldhub-widget-close" style="background: none; border: none; color: white; cursor: pointer; font-size: 20px;">&times;</button>
     \`;
 
     // Messages area
     const messagesArea = document.createElement('div');
-    messagesArea.id = 'echobase-widget-messages';
+    messagesArea.id = 'enduroshieldhub-widget-messages';
     messagesArea.style.cssText = \`
       flex: 1;
       padding: 16px;
@@ -205,7 +205,7 @@ export async function GET(
       widgetWindow.style.display = isOpen ? 'flex' : 'none';
     };
 
-    document.getElementById('echobase-widget-close').onclick = () => {
+    document.getElementById('enduroshieldhub-widget-close').onclick = () => {
       isOpen = false;
       widgetWindow.style.display = 'none';
     };
@@ -228,7 +228,7 @@ export async function GET(
 
       // Show loading
       const loadingMsg = document.createElement('div');
-      loadingMsg.id = 'echobase-loading';
+      loadingMsg.id = 'enduroshieldhub-loading';
       loadingMsg.style.cssText = \`
         margin-bottom: 12px;
         text-align: left;
@@ -243,7 +243,7 @@ export async function GET(
 
       try {
         // Create conversation if needed
-        let conversationId = window.echobaseConversationId;
+        let conversationId = window.enduroshieldhubConversationId;
         if (!conversationId) {
           const convResponse = await fetch(config.apiUrl + '/conversation', {
             method: 'POST',
@@ -261,7 +261,7 @@ export async function GET(
             throw new Error('Invalid conversation response');
           }
           conversationId = convData.conversation.id;
-          window.echobaseConversationId = conversationId;
+          window.enduroshieldhubConversationId = conversationId;
         }
 
         // Send message
@@ -340,7 +340,7 @@ export async function GET(
         color: #9ca3af;
         border-top: 1px solid #e5e7eb;
       \`;
-      branding.textContent = 'Powered by EchoBase';
+      branding.textContent = 'Powered by EnduroShield Hub';
       widgetWindow.appendChild(branding);
     }
   }
@@ -352,7 +352,7 @@ export async function GET(
     createWidget();
   }
 
-  window.EchoBaseWidget = { initialized: true };
+  window.EnduroShieldHubWidget = { initialized: true };
 })();
 `;
 

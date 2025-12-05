@@ -59,7 +59,7 @@ export default function RootLayout({
     const loadWidget = async () => {
       try {
         // Remove any existing widget first
-        const existingContainer = document.getElementById('echobase-widget-container');
+        const existingContainer = document.getElementById('enduroshieldhub-widget-container');
         if (existingContainer) {
           existingContainer.remove();
         }
@@ -71,8 +71,8 @@ export default function RootLayout({
         }
 
         // Reset widget flag
-        if ((window as any).EchoBaseWidget) {
-          delete (window as any).EchoBaseWidget;
+        if ((window as any).EnduroShieldHubWidget) {
+          delete (window as any).EnduroShieldHubWidget;
         }
 
         // Fetch widget configuration for current tenant

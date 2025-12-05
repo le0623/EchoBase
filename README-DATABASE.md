@@ -1,6 +1,6 @@
-# Database Management for Echobase
+# Database Management for EnduroShield Hub
 
-This document explains how to manage the PostgreSQL database for the Echobase application using Docker and Prisma.
+This document explains how to manage the PostgreSQL database for the EnduroShield Hub application using Docker and Prisma.
 
 ## Quick Start
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// GET /api/sdk/echobase-sdk.js - Serve JavaScript SDK for AI-powered search
+// GET /api/sdk/enduroshieldhub-sdk.js - Serve JavaScript SDK for AI-powered search
 export async function GET(request: NextRequest) {
   const sdkCode = `
 (function(root, factory) {
@@ -9,16 +9,16 @@ export async function GET(request: NextRequest) {
   } else if (typeof module === 'object' && module.exports) {
     module.exports = factory();
   } else {
-    root.EchoBase = factory();
+    root.EnduroShieldHub = factory();
   }
 }(typeof self !== 'undefined' ? self : this, function() {
   'use strict';
 
   /**
-   * EchoBase JavaScript SDK
-   * AI-powered search integration for EchoBase
+   * EnduroShield Hub JavaScript SDK
+   * AI-powered search integration for EnduroShield Hub
    */
-  class EchoBaseSDK {
+  class EnduroShieldHubSDK {
     constructor(options) {
       if (!options || !options.apiKey) {
         throw new Error('API key is required');
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 
       this.apiKey = options.apiKey;
       this.subdomain = options.subdomain;
-      this.baseUrl = options.baseUrl || \`https://\${options.subdomain}.echobase.com\`;
+      this.baseUrl = options.baseUrl || \`https://\${options.subdomain}.enduroshieldhub.com\`;
       this.conversationHistory = options.conversationHistory || [];
     }
 
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
           timestamp: data.timestamp,
         };
       } catch (error) {
-        throw new Error(\`EchoBase SDK Error: \${error.message}\`);
+        throw new Error(\`EnduroShield Hub SDK Error: \${error.message}\`);
       }
     }
 
@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return EchoBaseSDK;
+  return EnduroShieldHubSDK;
 }));
 `;
 

@@ -1,4 +1,4 @@
-# EchoBase Setup Guide
+# EnduroShield Hub Setup Guide
 
 This is a multi-tenant application built with Next.js, WorkOS AuthKit, Prisma, and DaisyUI.
 
@@ -20,7 +20,7 @@ Create a `.env` file in the root directory with the following variables:
 
 ```env
 # Database
-DATABASE_URL="postgresql://username:password@localhost:5432/echobase"
+DATABASE_URL="postgresql://username:password@localhost:5432/enduroshieldhub"
 
 # WorkOS Configuration
 WORKOS_API_KEY="sk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
@@ -86,7 +86,7 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 ## Project Structure
 
 ```
-echobase/
+enduroshieldhub/
 ├── app/                    # Next.js app directory
 │   ├── api/auth/          # Authentication routes
 │   ├── dashboard/         # Protected dashboard

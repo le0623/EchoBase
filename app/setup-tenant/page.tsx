@@ -25,7 +25,7 @@ export default function SetupTenantPage() {
         <div className="flex flex-col items-center w-full p-8 lg:p-12">
           <h2 className="text-4xl font-extrabold mb-3">Setup Your Organization</h2>
           <p className="body-md text-[#676767] mb-6">
-            Create your organization workspace to get started with Echobase
+            Create your organization workspace to get started with EnduroShield Hub
           </p>
 
           {/* Use SubdomainForm for organization creation */}

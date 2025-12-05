@@ -2,8 +2,8 @@
 FROM postgres:16-alpine
 
 # Set environment variables
-ENV POSTGRES_DB=echobase
-ENV POSTGRES_USER=echobase
+ENV POSTGRES_DB=enduroshieldhub
+ENV POSTGRES_USER=enduroshieldhub
 ENV POSTGRES_PASSWORD=secret_leonel
 ENV POSTGRES_HOST_AUTH_METHOD=trust
 

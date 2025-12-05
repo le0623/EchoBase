@@ -4,7 +4,7 @@
 
 ### Database
 ```bash
-DATABASE_URL="postgresql://postgres:postgres@localhost:5433/echobase?schema=public"
+DATABASE_URL="postgresql://postgres:postgres@localhost:5433/enduroshieldhub?schema=public"
 ```
 
 ### NextAuth.js

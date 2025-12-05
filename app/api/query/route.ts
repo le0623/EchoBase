@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
 // GET /api/query - API documentation
 export async function GET(request: NextRequest) {
   return NextResponse.json({
-    message: 'EchoBase AI-Powered Search API',
+    message: 'EnduroShield Hub AI-Powered Search API',
     version: '1.0.0',
     endpoints: {
       query: {

@@ -41,12 +41,12 @@ export async function GET(
       overflow: hidden;
       background: #f9fafb;
     }
-    #echobase-widget-container {
+    #enduroshieldhub-widget-container {
       height: 100%;
       display: flex;
       flex-direction: column;
     }
-    #echobase-widget-header {
+    #enduroshieldhub-widget-header {
       background: ${widget.primaryColor};
       color: white;
       padding: 16px;
@@ -56,7 +56,7 @@ export async function GET(
       align-items: center;
       flex-shrink: 0;
     }
-    #echobase-widget-messages {
+    #enduroshieldhub-widget-messages {
       flex: 1;
       padding: 16px;
       overflow-y: auto;
@@ -87,7 +87,7 @@ export async function GET(
       background: #f3f4f6;
       color: #374151;
     }
-    #echobase-widget-input-area {
+    #enduroshieldhub-widget-input-area {
       padding: 16px;
       border-top: 1px solid #e5e7eb;
       display: flex;
@@ -95,7 +95,7 @@ export async function GET(
       background: white;
       flex-shrink: 0;
     }
-    #echobase-widget-input {
+    #enduroshieldhub-widget-input {
       flex: 1;
       padding: 10px 12px;
       border: 1px solid #d1d5db;
@@ -103,10 +103,10 @@ export async function GET(
       font-size: 14px;
       outline: none;
     }
-    #echobase-widget-input:focus {
+    #enduroshieldhub-widget-input:focus {
       border-color: ${widget.primaryColor};
     }
-    #echobase-widget-send {
+    #enduroshieldhub-widget-send {
       padding: 10px 20px;
       background: ${widget.primaryColor};
       color: white;
@@ -116,10 +116,10 @@ export async function GET(
       font-weight: 500;
       font-size: 14px;
     }
-    #echobase-widget-send:hover {
+    #enduroshieldhub-widget-send:hover {
       opacity: 0.9;
     }
-    #echobase-widget-send:disabled {
+    #enduroshieldhub-widget-send:disabled {
       opacity: 0.5;
       cursor: not-allowed;
     }
@@ -140,20 +140,20 @@ export async function GET(
   </style>
 </head>
 <body>
-  <div id="echobase-widget-container">
-    <div id="echobase-widget-header">
+  <div id="enduroshieldhub-widget-container">
+    <div id="enduroshieldhub-widget-header">
       <span>${widget.title}</span>
     </div>
-    <div id="echobase-widget-messages">
+    <div id="enduroshieldhub-widget-messages">
       <div class="welcome-message">${widget.welcomeMessage}</div>
     </div>
-    <div id="echobase-widget-input-area">
+    <div id="enduroshieldhub-widget-input-area">
       <input 
         type="text" 
-        id="echobase-widget-input" 
+        id="enduroshieldhub-widget-input" 
         placeholder="${widget.placeholder}"
       />
-      <button id="echobase-widget-send">Send</button>
+      <button id="enduroshieldhub-widget-send">Send</button>
     </div>
   </div>
 
@@ -166,9 +166,9 @@ export async function GET(
         apiUrl: '${baseUrl}/api/widget/${widget.widgetId}',
       };
 
-      const messagesArea = document.getElementById('echobase-widget-messages');
-      const input = document.getElementById('echobase-widget-input');
-      const sendButton = document.getElementById('echobase-widget-send');
+      const messagesArea = document.getElementById('enduroshieldhub-widget-messages');
+      const input = document.getElementById('enduroshieldhub-widget-input');
+      const sendButton = document.getElementById('enduroshieldhub-widget-send');
       let conversationId = null;
 
       function escapeHtml(text) {
@@ -269,7 +269,7 @@ export async function GET(
 
       // Post message to parent window when widget is ready (for iframe communication)
       if (window.parent !== window) {
-        window.parent.postMessage({ type: 'echobase-widget-ready', widgetId: config.widgetId }, '*');
+        window.parent.postMessage({ type: 'enduroshieldhub-widget-ready', widgetId: config.widgetId }, '*');
       }
     })();
   </script>

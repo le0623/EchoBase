@@ -127,7 +127,7 @@ export default function RequestAccessPage() {
         <div className="max-w-md mx-auto w-full">
           <h2 className="text-5xl font-extrabold mb-4">Request Access</h2>
           <p className="body-md text-[#676767] mb-8">
-            Create your account to get started with Echobase
+            Create your account to get started with EnduroShield Hub
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-6">

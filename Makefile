@@ -1,13 +1,13 @@
-# Database Management Makefile for Echobase
+# Database Management Makefile for EnduroShield Hub
 # Prisma + PostgreSQL operations
 
 # Variables
-DB_NAME ?= echobase
+DB_NAME ?= enduroshieldhub
 DB_USER ?= postgres
 DB_PASSWORD ?= postgres
 DB_HOST ?= localhost
 DB_PORT ?= 5432
-CONTAINER_NAME ?= echobase-postgres
+CONTAINER_NAME ?= enduroshieldhub-postgres
 BACKUP_DIR ?= ./backups
 TIMESTAMP := $(shell date +%Y%m%d_%H%M%S)
 BACKUP_FILE ?= $(BACKUP_DIR)/backup_$(TIMESTAMP).sql
@@ -22,7 +22,7 @@ NC := \033[0m # No Color
 
 # Default target
 help: ## Show this help message
-	@echo "$(GREEN)Echobase Database Management$(NC)"
+	@echo "$(GREEN)EnduroShield Hub Database Management$(NC)"
 	@echo "=================================="
 	@echo ""
 	@echo "$(YELLOW)Available commands:$(NC)"

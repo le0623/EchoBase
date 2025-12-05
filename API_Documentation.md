@@ -1,13 +1,13 @@
-# EchoBase API Documentation
+# EnduroShield Hub API Documentation
 
 ## Overview
-EchoBase is a multi-tenant document management system with user authentication, role-based access control, and document approval workflows.
+EnduroShield Hub is a multi-tenant document management system with user authentication, role-based access control, and document approval workflows.
 
 ## Postman Collection Setup
 
 ### Files Included
-1. `EchoBase_API_Collection.postman_collection.json` - Complete API collection
-2. `EchoBase_Environment.postman_environment.json` - Environment variables
+1. `EnduroShieldHub_API_Collection.postman_collection.json` - Complete API collection
+2. `EnduroShieldHub_Environment.postman_environment.json` - Environment variables
 3. `API_Documentation.md` - This documentation file
 
 ### Import Instructions
@@ -15,14 +15,14 @@ EchoBase is a multi-tenant document management system with user authentication, 
 1. **Import Collection:**
    - Open Postman
    - Click "Import" button
-   - Select `EchoBase_API_Collection.postman_collection.json`
+   - Select `EnduroShieldHub_API_Collection.postman_collection.json`
    - Click "Import"
 
 2. **Import Environment:**
    - Click "Import" button
-   - Select `EchoBase_Environment.postman_environment.json`
+   - Select `EnduroShieldHub_Environment.postman_environment.json`
    - Click "Import"
-   - Select the "EchoBase Environment" from the environment dropdown
+   - Select the "EnduroShield Hub Environment" from the environment dropdown
 
 3. **Configure Environment:**
    - Update `baseUrl` if your server runs on a different port

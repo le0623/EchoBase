@@ -31,12 +31,12 @@ export function extractSubdomain(request: NextRequest): string | null {
     return parts.length > 0 ? parts[0] : null;
   }
 
-  // Handle Vercel production domain (echobase.vercel.app)
+  // Handle Vercel production domain (enduroshieldhub.vercel.app)
   if (hostname === rootDomain) {
     return null; // This is the main domain
   }
 
-  // Handle Vercel subdomains ([subdomain].echobase.vercel.app)
+  // Handle Vercel subdomains ([subdomain].enduroshieldhub.vercel.app)
   if (hostname.endsWith(`.${rootDomain}`)) {
     const subdomain = hostname.replace(`.${rootDomain}`, '');
     // Ensure it's not www or other reserved subdomains

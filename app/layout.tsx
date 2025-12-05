@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "EchoBase - Multi-Tenant Application",
+  title: "EnduroShield Hub - Multi-Tenant Application",
   description: "A modern, multi-tenant application built with Next.js, WorkOS AuthKit, and DaisyUI",
 };
 

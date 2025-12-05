@@ -1,6 +1,6 @@
 # TanStack Query Integration Guide
 
-This guide explains how TanStack Query (React Query) is integrated into the EchoBase application for state management and data fetching.
+This guide explains how TanStack Query (React Query) is integrated into the EnduroShield Hub application for state management and data fetching.
 
 ## 🚀 Features Implemented
 

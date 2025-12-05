@@ -12,6 +12,7 @@ interface WidgetConfig {
   secondaryColor: string;
   position: string;
   title: string;
+  updatedAt?: string;
   welcomeMessage: string;
   placeholder: string;
   showBranding: boolean;
@@ -510,15 +511,15 @@ export default function WidgetPage() {
                             const currentUrl = typeof window !== 'undefined' ? window.location.origin : '';
                             const baseUrl = currentUrl.includes('/s/') 
                               ? currentUrl.split('/s/')[0] 
-                              : currentUrl || 'https://your-subdomain.echobase.com';
-                            return `<script src="${baseUrl}/api/sdk/echobase-sdk.js"></script>`;
+                              : currentUrl || 'https://your-subdomain.enduroshieldhub.com';
+                            return `<script src="${baseUrl}/api/sdk/enduroshieldhub-sdk.js"></script>`;
                           })()}
                         </code>
                       </div>
                       <div>
                         <p className="text-xs font-semibold text-blue-900 mb-1">2. Initialize and use:</p>
                         <code className="block text-xs bg-white p-2 rounded border border-blue-300 whitespace-pre overflow-x-auto">
-{`const sdk = new EchoBase({
+{`const sdk = new EnduroShieldHub({
   apiKey: 'your-api-key',
   subdomain: 'your-subdomain'
 });

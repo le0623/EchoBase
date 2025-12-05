@@ -83,7 +83,7 @@ export async function loadPDFText(fileUrl: string): Promise<string> {
         path: url.pathname + url.search,
         method: 'GET',
         headers: {
-          'User-Agent': 'EchoBase-PDF-Parser',
+          'User-Agent': 'EnduroShieldHub-PDF-Parser',
         },
       };
 
